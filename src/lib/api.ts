@@ -1,8 +1,8 @@
 // src/lib/api.ts
 
-import { BskyAgent } from '@atproto/api';
+import { AtpAgent } from '@atproto/api';
 
 // Initialize the Bluesky agent
-export const agent = new BskyAgent({
+export const agent = new AtpAgent({
   service: 'https://public.api.bsky.app', // Use public API for non-authenticated requests
 });
