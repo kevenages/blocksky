@@ -20,20 +20,22 @@ interface UserProfile {
 
 interface UserProfileDisplayProps {
   handle: string;
-  onBlockUser: () => void;
-  onBlockNetwork: () => void;
+  onBlockUser?: () => void;
+  onBlockNetwork?: () => void;
+  isLoggedIn: boolean;
 }
 
 export default function UserProfileDisplay({
   handle,
   onBlockUser,
   onBlockNetwork,
+  isLoggedIn, // Correctly pass this from props
 }: UserProfileDisplayProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [accountHandle, setAccountHandle] = useState('');
   const [appPassword, setAppPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const { isLoggedIn, login, errorMessage } = useAuth();
+  const { login, errorMessage } = useAuth(); // Only destructure login and errorMessage
 
   useEffect(() => {
     async function loadProfile() {
@@ -85,7 +87,7 @@ export default function UserProfileDisplay({
               <Button onClick={onBlockUser} variant="secondary">
                 Block User
               </Button>
-              <Button onClick={onBlockNetwork} variant="danger">
+              <Button onClick={onBlockNetwork} variant="destructive">
                 Block User and Network
               </Button>
             </div>
