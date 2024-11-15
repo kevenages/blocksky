@@ -38,7 +38,7 @@ export default function UserBlocker() {
         type="text"
         value={username}
         onChange={handleInputChange}
-        placeholder="Enter Bluesky Username"
+        placeholder="Enter Bluesky name or handle"
         className="border border-gray-300 rounded-md w-full max-w-md px-4 py-2 mt-4 mb-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         autoComplete="off"
       />
