@@ -1,32 +1,25 @@
 // src/components/UserBlocker.tsx
-
 "use client";
 
 import React, { useState } from 'react';
-import InfoCard from '../components/InfoCard';
-import SuggestionsList from '../components/SuggestionsList';
-import UserProfileDisplay from '../components/UserProfileDisplay';
+import InfoCard from './InfoCard';
+import SuggestionsList from './SuggestionsList';
+import UserProfileDisplay from './UserProfileDisplay';
+import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 
 export default function UserBlocker() {
   const [username, setUsername] = useState('');
-  const {
-    userProfile,
-    suggestions,
-    loadUserProfile,
-    fetchSuggestions,
-    clearSuggestions,
-    handleBlockUser,
-    handleBlockUserNetwork,
-  } = useUserProfile();
+  const { userProfile, suggestions, loadUserProfile, fetchSuggestions, clearSuggestions, setSuggestions } = useUserProfile();
+  const { isLoggedIn } = useAuth();
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     setUsername(input);
 
     if (input.length > 1) {
-      await fetchSuggestions(input);
-      console.log("Suggestions after fetch:", suggestions);
+      const fetchedSuggestions = await fetchSuggestions(input);
+      setSuggestions(fetchedSuggestions); // Use setSuggestions here
     } else {
       clearSuggestions();
     }
@@ -39,24 +32,21 @@ export default function UserBlocker() {
   };
 
   return (
-    <div className="flex flex-col items-center space-y-6">
+    <div className="flex flex-col items-center space-y-4">
       <InfoCard />
       <input
         type="text"
         value={username}
         onChange={handleInputChange}
-        placeholder="Enter Bluesky username"
-        className="border rounded w-full max-w-md px-4 py-2 mb-4"
+        placeholder="Enter Bluesky Username"
+        className="border border-gray-300 rounded-md w-full max-w-md px-4 py-2 mt-4 mb-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        autoComplete="off"
       />
       <SuggestionsList suggestions={suggestions} onSelect={selectSuggestion} />
-
-      {userProfile && <hr className="border-t border-gray-200 my-4 w-full max-w-md" />}
-
       {userProfile && (
         <UserProfileDisplay
-          userProfile={userProfile}
-          onBlockUser={handleBlockUser}
-          onBlockNetwork={handleBlockUserNetwork}
+          handle={userProfile.handle}
+          isLoggedIn={isLoggedIn}
         />
       )}
     </div>
