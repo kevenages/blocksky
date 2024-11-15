@@ -1,7 +1,4 @@
 // src/components/SuggestionsList.tsx
-
-"use client";
-
 import React from 'react';
 import { FaUserCircle } from 'react-icons/fa';
 
@@ -16,12 +13,11 @@ interface SuggestionsListProps {
   onSelect: (suggestion: Suggestion) => void;
 }
 
-export default function SuggestionsList({ suggestions, onSelect }: SuggestionsListProps) {
+export default function SuggestionsList({ suggestions = [], onSelect }: SuggestionsListProps) {
+  // Ensure suggestions has a default empty array if not provided
   if (suggestions.length === 0) {
     return null;
   }
-
-  console.log("Rendering suggestions:", suggestions); // Check suggestions content
 
   return (
     <ul className="rounded bg-white shadow-md max-h-40 overflow-y-auto w-full max-w-md">
