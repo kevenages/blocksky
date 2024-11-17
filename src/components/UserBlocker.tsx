@@ -1,17 +1,22 @@
-// src/components/UserBlocker.tsx
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InfoCard from './InfoCard';
 import SuggestionsList from './SuggestionsList';
 import UserProfileDisplay from './UserProfileDisplay';
 import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { blockUser, blockUserNetwork } from '../lib/blockApi'; // Use the correct exported function name
 
 export default function UserBlocker() {
   const [username, setUsername] = useState('');
+  const [hydrated, setHydrated] = useState(false); // Add hydration check
   const { userProfile, suggestions, loadUserProfile, fetchSuggestions, clearSuggestions, setSuggestions } = useUserProfile();
   const { isLoggedIn } = useAuth();
+
+  useEffect(() => {
+    setHydrated(true); // Set hydrated to true after mounting
+  }, []);
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
@@ -31,6 +36,23 @@ export default function UserBlocker() {
     loadUserProfile(suggestion.handle);
   };
 
+  const onBlockUser = async () => {
+    if (userProfile) {
+      await blockUser(userProfile.handle);
+      console.log(`${userProfile.handle} has been blocked.`);
+    }
+  };
+
+  const onBlockNetwork = async () => {
+    if (userProfile) {
+      await blockUserNetwork(userProfile.handle); // Use the correct function here
+      console.log(`Network of ${userProfile.handle} has been blocked.`);
+    }
+  };
+
+  // Return null or loading indicator until hydration
+  if (!hydrated) return null;
+
   return (
     <div className="flex flex-col items-center space-y-4">
       <InfoCard />
@@ -46,7 +68,9 @@ export default function UserBlocker() {
       {userProfile && (
         <UserProfileDisplay
           handle={userProfile.handle}
-          isLoggedIn={isLoggedIn}
+          isLoggedIn={isLoggedIn} // No change needed here
+          onBlockUser={onBlockUser} // Pass the function here
+          onBlockNetwork={onBlockNetwork} // Pass the function here
         />
       )}
     </div>

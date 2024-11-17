@@ -1,54 +1,49 @@
-// src/components/TopNav.tsx
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { FiLogOut } from 'react-icons/fi';
-import { FaGithub } from 'react-icons/fa';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/Tooltip';
+import { FiLogOut, FiGithub } from 'react-icons/fi';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/Tooltip';
+import { Button } from '@/components/ui/Button';
 
 export default function TopNav() {
   const { isLoggedIn, logout } = useAuth();
+  const [hydrated, setHydrated] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-  };
+  useEffect(() => {
+    setHydrated(true); // Component is now hydrated
+  }, []);
 
   return (
-    <nav className="w-full flex justify-between items-center px-6 py-4 bg-white shadow-md">
-      <div className="ml-auto flex items-center space-x-4">
-        {/* GitHub Icon with Tooltip */}
+    <nav className="w-full flex justify-end items-center px-6 py-4 bg-white shadow-md">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <a
+            href="https://github.com/kevenages/blocksky"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-600 hover:text-blue-500"
+          >
+            <FiGithub size={20} aria-label="View project on GitHub" />
+          </a>
+        </TooltipTrigger>
+        <TooltipContent>View project on GitHub</TooltipContent>
+      </Tooltip>
+      {hydrated && isLoggedIn && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <a
-              href="https://github.com/kevenages/blocksky"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Button
+              onClick={logout}
+              aria-label="Logout"
               className="text-gray-600 hover:text-blue-500"
-              aria-label="GitHub"
+              variant="grey"
             >
-              <FaGithub size={20} />
-            </a>
+              <FiLogOut size={20} />
+            </Button>
           </TooltipTrigger>
-          <TooltipContent>View project on GitHub</TooltipContent>
+          <TooltipContent>Log out of BlockSky</TooltipContent>
         </Tooltip>
-
-        {/* Logout Icon with Tooltip, visible only when logged in */}
-        {isLoggedIn && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleLogout}
-                className="text-gray-600 hover:text-red-500"
-                aria-label="Logout"
-              >
-                <FiLogOut size={20} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Log out of BlockSky</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+      )}
     </nav>
   );
 }
