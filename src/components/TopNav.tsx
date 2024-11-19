@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { FiLogOut, FiGithub } from 'react-icons/fi';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { Button } from './ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/Tooltip';
+import { Button } from './ui/Button';
 
 export default function TopNav() {
   const { isLoggedIn, logout } = useAuth();
