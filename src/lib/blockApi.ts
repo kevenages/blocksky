@@ -1,14 +1,23 @@
 import { agent } from './api';
 
-// Interface for User, representing basic user details from followers/following lists
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 interface User {
   handle: string;
+}
+
+interface PaginatedResponse<T> {
+  data: {
+    followers?: T[];
+    follows?: T[];
+    cursor?: string;
+  };
 }
 
 // Block a single user by handle
 export const blockUser = async (handle: string): Promise<boolean> => {
   try {
-    await agent.blockUser({ handle });
+    // await agent.blockUser({ handle });
     console.log(`${handle} has been blocked.`);
     return true;
   } catch (error) {
@@ -18,21 +27,49 @@ export const blockUser = async (handle: string): Promise<boolean> => {
 };
 
 // Block all followers and following of a user
-export const blockUserNetwork = async (handle: string): Promise<boolean> => {
+export const blockUserNetwork = async (
+  handle: string,
+  onProgress: (progress: number, count: number) => void
+): Promise<boolean> => {
   try {
-    const followers = await agent.getFollowers({ actor: handle });
-    const following = await agent.getFollowing({ actor: handle });
-    const usersToBlock: User[] = [...followers.data, ...following.data];
+    const usersToBlock: string[] = [];
+    let cursor: string | undefined;
 
-    // Block each user in the combined followers and following lists
-    for (const user of usersToBlock) {
-      await agent.blockUser({ handle: user.handle });
+    // Fetch all followers
+    do {
+      const followers: PaginatedResponse<User> = await agent.getFollowers({ actor: handle, cursor });
+      if (followers.data.followers) {
+        usersToBlock.push(...followers.data.followers.map((f) => f.handle));
+      }
+      cursor = followers.data.cursor;
+    } while (cursor);
+
+    // Fetch all following
+    cursor = undefined;
+    do {
+      const following: PaginatedResponse<User> = await agent.getFollows({ actor: handle, cursor });
+      if (following.data.follows) {
+        usersToBlock.push(...following.data.follows.map((f) => f.handle));
+      }
+      cursor = following.data.cursor;
+    } while (cursor);
+
+    const totalUsers = usersToBlock.length;
+
+    // Block each user and update progress
+    for (let i = 0; i < usersToBlock.length; i++) {
+      const userHandle = usersToBlock[i];
+      console.log(userHandle);
+      await sleep(5); // Slow down for debugging, replace with appropriate timeout if necessary
+      // Uncomment the next line to block users when ready
+      // await agent.blockUser({ handle: userHandle });
+      const progress = ((i + 1) / totalUsers) * 100;
+      onProgress(progress, i + 1); // Pass progress and count to the callback
     }
 
-    console.log(`Blocked ${usersToBlock.length} users connected to ${handle}.`);
     return true;
   } catch (error) {
-    console.error('Mass blocking failed:', error);
+    console.error("Mass blocking failed:", error);
     return false;
   }
 };
