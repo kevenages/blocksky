@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from '../hooks/useAuth';
 import TopNav from './TopNav';
-import Script from 'next/script';
 import Loader from '@/components/Loader';
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
