@@ -67,6 +67,8 @@ export const blockUserNetwork = async (
       onProgress(progress, i + 1); // Pass progress and count to the callback
     }
 
+    console.log(usersToBlock.toString());
+
     return true;
   } catch (error) {
     console.error("Mass blocking failed:", error);
