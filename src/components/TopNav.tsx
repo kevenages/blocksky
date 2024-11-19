@@ -15,7 +15,7 @@ export default function TopNav() {
   }, []);
 
   return (
-    <nav className="w-full flex justify-end items-center px-6 py-4 bg-white shadow-md">
+    <nav className="w-full flex justify-end items-center px-6 py-4 bg-white">
       <Tooltip>
         <TooltipTrigger asChild>
           <a
