@@ -1,7 +1,7 @@
 // src/app/layout.tsx
 import './globals.css';
 import ClientWrapper from '../components/ClientWrapper';
-import { TooltipProvider } from '../components/ui/tooltip';
+import { TooltipProvider } from '../components/ui/Tooltip';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
