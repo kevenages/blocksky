@@ -9,7 +9,6 @@ export default function Loader() {
         priority
         src={mainLoader}
         alt="Loading..."
-        priority={true}
       />
     </div>
 

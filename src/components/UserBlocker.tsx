@@ -53,7 +53,7 @@ export default function UserBlocker() {
 
   const onBlockUser = async () => {
     if (userProfile) {
-      await blockUser(userProfile.handle);
+      //await blockUser(userProfile.handle);
       console.log(`${userProfile.handle} has been blocked.`);
     }
   };

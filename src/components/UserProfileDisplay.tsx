@@ -10,8 +10,8 @@ import HelpSheet from "./HelpSheet";
 import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Progress } from "@/components/ui/Progress";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/Alert";
-import { Image } from 'next/image'
 
+// Define the UserProfile interface
 interface UserProfile {
   displayName: string;
   handle: string;
@@ -24,7 +24,7 @@ interface UserProfileDisplayProps {
   handle: string;
   onBlockUser: () => void;
   onBlockNetwork: () => Promise<void>;
-  isLoggedIn: boolean; // Keep this prop
+  isLoggedIn: boolean;
   blockProgress: number;
   isCompleted: boolean;
   blockedCount: number;
@@ -131,7 +131,7 @@ export default function UserProfileDisplay({
               </div>
             )}
             {isCompleted && (
-              <Alert variant="success" className="w-full">
+              <Alert className="w-full">
                 <AlertTitle>Success!</AlertTitle>
                 <AlertDescription>
                   You have successfully blocked {blockedCount} users.

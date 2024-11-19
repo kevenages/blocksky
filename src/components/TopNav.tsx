@@ -36,7 +36,6 @@ export default function TopNav() {
               onClick={logout}
               aria-label="Logout"
               className="text-gray-600 hover:text-blue-500"
-              variant="grey"
             >
               <FiLogOut size={20} />
             </Button>
