@@ -66,7 +66,6 @@ export const blockUserNetwork = async (
       const progress = ((i + 1) / totalUsers) * 100;
       onProgress(progress, i + 1); // Pass progress and count to the callback
     }
-
     console.log(usersToBlock.toString());
 
     return true;
