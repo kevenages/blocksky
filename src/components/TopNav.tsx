@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { FiLogOut, FiGithub } from 'react-icons/fi';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/Tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/Tooltip';
 import Link from 'next/link'
 
 export default function TopNav() {
