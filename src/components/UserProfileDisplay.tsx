@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { getProfile } from "../lib/actorApi";
-import { Badge } from "../components/ui/Badge";
-import { Button } from "../components/ui/Button";
-import { Card, CardContent, CardFooter, CardHeader } from "../components/ui/Card";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "../components/ui/card";
 import HelpSheet from "./HelpSheet";
 import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
-import { Progress } from "../components/ui/Progress";
-import { Alert, AlertTitle, AlertDescription } from "../components/ui/Alert";
+import { Progress } from "../components/ui/progress";
+import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
 
 // Define the UserProfile interface
 interface UserProfile {
