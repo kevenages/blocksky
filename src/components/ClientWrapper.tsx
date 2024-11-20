@@ -1,6 +1,7 @@
 // src/components/ClientWrapper.tsx
 "use client";
 
+
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from '../hooks/useAuth';
 import TopNav from './TopNav';
