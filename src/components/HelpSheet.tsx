@@ -9,7 +9,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert"
 import { FaQuestionCircle } from 'react-icons/fa';
 import { RxOpenInNewWindow } from "react-icons/rx";
 
-
 export default function HelpSheet() {
   return (
     <Sheet>
@@ -26,7 +25,7 @@ export default function HelpSheet() {
           <Alert className="my-4">
             <AlertTitle>What is a Bluesky App Password?</AlertTitle>
             <AlertDescription>
-              App Passwords allow you to login to applications like Blocksky without giving full access to your account or password.
+              App Passwords allow you to log in to applications like Blocksky without giving full access to your account or password.
             </AlertDescription>
           </Alert>
           <ol className="list-decimal list-inside mt-2">
@@ -36,56 +35,56 @@ export default function HelpSheet() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500"
-                >
-                  Go to your 'App Passwords' setting on Bluesky <RxOpenInNewWindow className="inline-block" />
+              >
+                Go to your &apos;App Passwords&apos; setting on Bluesky <RxOpenInNewWindow className="inline-block" />
               </Link>
-                <Image
-                  src="/images/app-password-1.png"
-                  width={500}
-                  height={500}
-                  className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                  alt=""
-                />
+              <Image
+                src="/images/app-password-1.png"
+                width={500}
+                height={500}
+                className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
+                alt=""
+              />
             </li>
             <li>
               Enter a name for your new password. You may create one specifically for use with Blocksky, if you wish.
-                <Image
-                  src="/images/app-password-2.png"
-                  width={500}
-                  height={500}
-                  className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                  alt=""
-               />
+              <Image
+                src="/images/app-password-2.png"
+                width={500}
+                height={500}
+                className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
+                alt=""
+              />
             </li>
             <li>
               Copy the password and put it somewhere safe.
-                <Image
-                  src="/images/app-password-3.png"
-                  width={500}
-                  height={500}
-                  className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                  alt=""
-               />
+              <Image
+                src="/images/app-password-3.png"
+                width={500}
+                height={500}
+                className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
+                alt=""
+              />
             </li>
             <li>
-              Use this app password to login instead of your main account password.
+              Use this app password to log in instead of your main account password.
               <Image
-                  src="/images/app-password-4.png"
-                  width={500}
-                  height={500}
-                  className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                  alt=""
-               />
+                src="/images/app-password-4.png"
+                width={500}
+                height={500}
+                className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
+                alt=""
+              />
             </li>
             <li>
               When you are done, you can either choose to keep the app password or delete it in your Bluesky settings.
               <Image
-                  src="/images/app-password-5.png"
-                  width={500}
-                  height={500}
-                  className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                  alt=""
-               />
+                src="/images/app-password-5.png"
+                width={500}
+                height={500}
+                className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
+                alt=""
+              />
             </li>
           </ol>
         </div>
