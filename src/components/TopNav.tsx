@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { FiLogOut, FiGithub } from 'react-icons/fi';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/Tooltip';
-import { Button } from '@/components/ui/Button';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/Tooltip';
+import { Button } from './ui/Button';
 
 export default function TopNav() {
   const { isLoggedIn, logout } = useAuth();
@@ -15,7 +15,7 @@ export default function TopNav() {
   }, []);
 
   return (
-    <nav className="w-full flex justify-end items-center px-6 py-4 bg-white shadow-md">
+    <nav className="w-full flex justify-end items-center px-6 py-4 bg-white">
       <Tooltip>
         <TooltipTrigger asChild>
           <a
@@ -36,7 +36,6 @@ export default function TopNav() {
               onClick={logout}
               aria-label="Logout"
               className="text-gray-600 hover:text-blue-500"
-              variant="grey"
             >
               <FiLogOut size={20} />
             </Button>
