@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/Card";
 import HelpSheet from "./HelpSheet";
 import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
+import { Progress } from "@/components/ui/Progress";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/Alert";
 
+// Define the UserProfile interface
 interface UserProfile {
   displayName: string;
   handle: string;
@@ -20,24 +23,32 @@ interface UserProfile {
 interface UserProfileDisplayProps {
   handle: string;
   onBlockUser: () => void;
-  onBlockNetwork: () => void;
+  onBlockNetwork: () => Promise<void>;
   isLoggedIn: boolean;
+  blockProgress: number;
+  isCompleted: boolean;
+  blockedCount: number;
 }
 
 export default function UserProfileDisplay({
   handle,
   onBlockUser,
   onBlockNetwork,
+  isLoggedIn,
+  blockProgress,
+  isCompleted,
+  blockedCount,
 }: UserProfileDisplayProps) {
-  const [hydrated, setHydrated] = useState(false); // Ensure client-side rendering
+  const [hydrated, setHydrated] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [accountHandle, setAccountHandle] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const { isLoggedIn, login, errorMessage } = useAuth();
+  const [isBlocking, setIsBlocking] = useState(false);
+  const { login, errorMessage } = useAuth();
 
   useEffect(() => {
-    setHydrated(true); // Mark component as hydrated
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -51,7 +62,13 @@ export default function UserProfileDisplay({
 
   const handleLogin = () => login(accountHandle, appPassword);
 
-  if (!hydrated) return null; // Avoid mismatch by delaying rendering until hydrated
+  const handleBlockNetworkClick = async () => {
+    setIsBlocking(true);
+    await onBlockNetwork();
+    setIsBlocking(false);
+  };
+
+  if (!hydrated) return null;
 
   return (
     <Card className="w-full max-w-md mt-8">
@@ -94,13 +111,33 @@ export default function UserProfileDisplay({
       <CardContent className="border-b border-gray-200 p-0" />
       <CardFooter className="flex flex-col items-center space-y-4 py-4">
         {isLoggedIn ? (
-          <div className="flex space-x-4">
-            <Button onClick={onBlockUser} variant="secondary">
-              Block User
-            </Button>
-            <Button onClick={onBlockNetwork} variant="destructive">
-              Block User and Network
-            </Button>
+          <div className="flex flex-col space-y-4 w-full">
+            <div className="flex space-x-4">
+              <Button onClick={onBlockUser} variant="secondary">
+                Block User
+              </Button>
+              <Button
+                onClick={handleBlockNetworkClick}
+                variant="destructive"
+                disabled={isBlocking}
+              >
+                {isBlocking ? "Fetching accounts..." : "Block User and Network"}
+              </Button>
+            </div>
+            {blockProgress > 0 && !isCompleted && (
+              <div className="w-full">
+                <Progress value={blockProgress} />
+                <p className="text-center mt-2">{Math.round(blockProgress)}% Complete</p>
+              </div>
+            )}
+            {isCompleted && (
+              <Alert className="w-full">
+                <AlertTitle>Success!</AlertTitle>
+                <AlertDescription>
+                  You have successfully blocked {blockedCount} users.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-2 w-full">
