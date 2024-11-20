@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { AiOutlineInfoCircle } from 'react-icons/ai';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 
 export default function InfoCard() {
   return (
