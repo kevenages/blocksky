@@ -4,8 +4,8 @@ import React from 'react';
 import Link from 'next/link'
 import Image from 'next/image'
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/Sheet';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/Sheet';
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/Alert"
 import { FaQuestionCircle } from 'react-icons/fa';
 import { RxOpenInNewWindow } from "react-icons/rx";
 
