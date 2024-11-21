@@ -14,7 +14,7 @@ export default function HelpSheet() {
     <Sheet>
       <SheetTrigger asChild>
         <button aria-label="Help">
-          <FaQuestionCircle className="text-gray-500 hover:text-blue-500" />
+          <FaQuestionCircle className="text-blue-500 hover:text-green-500 size-6" />
         </button>
       </SheetTrigger>
       <SheetContent side="right" className="min-w-[40vw] overflow-auto">
