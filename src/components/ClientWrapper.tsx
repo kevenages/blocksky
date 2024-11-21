@@ -25,18 +25,11 @@ export default function ClientWrapper({ children }: { children: React.ReactNode 
   return (
     <AuthProvider>
       <TopNav />
-      <main className="w-full max-w-lg mx-auto p-8 text-center mt-8 relative">
-        <h1 className="text-4xl font-bold text-blue-600 mb-8">
-          Bl<span id="no-symbol" className="inline-block">🚫</span>cksk<span id="target-letter">y</span>
+      <main className="w-full max-w-lg mx-auto p-8 text-center mt-2 relative">
+        <h1 className="text-4xl font-bold text-blue-600 mb-4">
+          BlockSky
         </h1>
         {children}
-        <div
-          id="butterfly"
-          className="absolute" // Start hidden, fade in later
-          style={{ width: '96px', height: '96px' }} // Larger size for butterfly
-        >
-          🦋 {/* The butterfly icon */}
-        </div>
       </main>
     </AuthProvider>
   );
