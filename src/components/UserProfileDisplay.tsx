@@ -149,7 +149,7 @@ export default function UserProfileDisplay({
     ) : (
       <div className="flex flex-col items-center space-y-2 w-full">
         <div className="flex items-center space-x-2 mb-2">
-          <span>Please log in using a Bluesky App Password. This is <strong>NOT</strong> the same as your main Bluesky password</span>
+          <span>To block users, log in with your Bluesky App Password. Note: This is different from your main Bluesky password.</span>
           <HelpSheet />
         </div>
         <input
