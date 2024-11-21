@@ -9,7 +9,7 @@ export async function resolvePDS(handle: string): Promise<string | null> {
     
     // Extract host information from the DID
     if (data.did) {
-      const hostname = data.did.replace('did:plc:', '').replace(/\..*$/, '') + '.host.bsky.network';
+      const hostname = data.did.replace('did:plc:', '').replace(/\..*$/, '') + '.host.bsky.Followers';
       return `https://${hostname}`;
     }
 

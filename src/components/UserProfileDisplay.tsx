@@ -23,7 +23,7 @@ interface UserProfile {
 interface UserProfileDisplayProps {
   handle: string;
   onBlockUser: () => void;
-  onBlockNetwork: () => Promise<void>;
+  onBlockFollowers: () => Promise<void>;
   isLoggedIn: boolean;
   blockProgress: number;
   isCompleted: boolean;
@@ -33,7 +33,7 @@ interface UserProfileDisplayProps {
 export default function UserProfileDisplay({
   handle,
   onBlockUser,
-  onBlockNetwork,
+  onBlockFollowers,
   isLoggedIn,
   blockProgress,
   isCompleted,
@@ -62,9 +62,9 @@ export default function UserProfileDisplay({
 
   const handleLogin = () => login(accountHandle, appPassword);
 
-  const handleBlockNetworkClick = async () => {
+  const handleBlockFollowersClick = async () => {
     setIsBlocking(true);
-    await onBlockNetwork();
+    await onBlockFollowers();
     setIsBlocking(false);
   };
 
@@ -122,7 +122,7 @@ export default function UserProfileDisplay({
               Block User
             </Button>
             <Button
-              onClick={handleBlockNetworkClick}
+              onClick={handleBlockFollowersClick}
               variant="destructive"
               disabled={isBlocking}
               className="w-full"
@@ -141,7 +141,7 @@ export default function UserProfileDisplay({
           <Alert className="w-full">
             <AlertTitle>Success!</AlertTitle>
             <AlertDescription>
-              You have successfully blocked {blockedCount} users.
+              You have successfully blocked {blockedCount.toLocaleString()} users.
             </AlertDescription>
           </Alert>
         )}

@@ -17,7 +17,7 @@ export default function InfoCard() {
       </CardHeader>
       <CardContent>
         <p className="text-gray-600">
-          Blocksky is a streamlined tool for managing your Bluesky experience, allowing users to <strong>mass block an account's followers</strong> and curate their social space for a safer and more personalized environment.
+          Blocksky is a streamlined tool for managing your Bluesky experience, allowing you to <strong>mass block an account's followers</strong> and curate your social space for a safer and more personalized environment.
         </p>
       </CardContent>
     </Card>

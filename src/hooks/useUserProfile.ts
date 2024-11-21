@@ -1,7 +1,7 @@
 // src/hooks/useUserProfile.ts
 import { useState } from 'react';
 import { getProfile, searchActors } from '../lib/actorApi';
-import { blockUserNetwork } from '../lib/blockApi';
+import { blockUserFollowers } from '../lib/blockApi';
 
 interface UserProfile {
   handle: string;
@@ -16,20 +16,20 @@ export function useUserProfile() {
   const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
   const [blockProgress, setBlockProgress] = useState(0);
 
-  // Updated startBlockUserNetwork function
-const startBlockUserNetwork = async (
+  // Updated startBlockUserFollowers function
+const startBlockUserFollowers = async (
   handle: string,
   onProgress: (progress: number, count: number) => void
 ) => {
   setBlockProgress(0); // Reset progress
   try {
-    await blockUserNetwork(handle, (progress: number, blockedCount: number) => {
+    await blockUserFollowers(handle, (progress: number, blockedCount: number) => {
       console.log(`Callback invoked: Progress - ${progress}, Count - ${blockedCount}`);
       setBlockProgress(progress); // Update local progress
       onProgress(progress, blockedCount); // Update via callback
     });
   } catch (error) {
-    console.error('Error blocking network:', error);
+    console.error('Error blocking Followers:', error);
   }
 };
 
@@ -65,6 +65,6 @@ const startBlockUserNetwork = async (
     clearSuggestions,
     setSuggestions,
     blockProgress,
-    startBlockUserNetwork,
+    startBlockUserFollowers,
   };
 }

@@ -27,7 +27,7 @@ export const blockUser = async (handle: string): Promise<boolean> => {
 };
 
 // Block all followers and following of a user
-export const blockUserNetwork = async (
+export const blockUserFollowers = async (
   handle: string,
   onProgress: (progress: number, count: number) => void
 ): Promise<boolean> => {
