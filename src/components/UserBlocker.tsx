@@ -14,17 +14,17 @@ export default function UserBlocker() {
   const [blockedCount, setBlockedCount] = useState(0); // Track blocked users count
   const { userProfile, suggestions, loadUserProfile, fetchSuggestions, clearSuggestions, setSuggestions } = useUserProfile();
   const { isLoggedIn } = useAuth();
-  const { blockProgress, startBlockUserNetwork } = useUserProfile();
+  const { blockProgress, startBlockUserFollowers } = useUserProfile();
 
   useEffect(() => {
     setHydrated(true); // Set hydrated to true after mounting
   }, []);
 
-  const handleBlockNetwork = async () => {
+  const handleBlockFollowers = async () => {
     setIsCompleted(false);
     setBlockedCount(0);
 
-    await startBlockUserNetwork(username, (progress: number, count: number) => {
+    await startBlockUserFollowers(username, (progress: number, count: number) => {
       console.log(`Progress: ${progress}%, Blocked Count: ${count}`);
       if (progress === 100) {
         setIsCompleted(true);
@@ -78,7 +78,7 @@ export default function UserBlocker() {
           handle={userProfile.handle}
           isLoggedIn={isLoggedIn} // Pass the authentication state
           onBlockUser={onBlockUser} // Pass the block user function
-          onBlockNetwork={handleBlockNetwork} // Pass the block followers function
+          onBlockFollowers={handleBlockFollowers} // Pass the block followers function
           blockProgress={blockProgress} // Pass the progress
           isCompleted={isCompleted} // Pass the completion state
           blockedCount={blockedCount} // Pass the blocked count

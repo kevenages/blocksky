@@ -23,11 +23,10 @@ export const getProfile = async (handle: string): Promise<Profile | null> => {
 // Search actors
 export const searchActors = async (query: string, limit: number = 5): Promise<Profile[]> => {
   try {
-    const response = await agent.searchActors({
+    const response = await agent.searchActorsTypeahead({
       q: query,
       limit,
     });
-    console.log("Fetched actors:", response.data.actors);
 
     // Map and return actors to align with Profile interface structure
     return response.data.actors.map((actor) => ({
