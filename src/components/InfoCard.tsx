@@ -1,5 +1,4 @@
 // src/components/InfoCard.tsx
-
 "use client";
 
 import React from 'react';
