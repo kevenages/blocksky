@@ -1,4 +1,5 @@
 import { agent } from './api';
+import { toast } from "../hooks/use-toast";
 
 // Profile interface aligned with the lexicon
 interface Profile {
@@ -15,6 +16,11 @@ export const getProfile = async (handle: string): Promise<Profile | null> => {
     const profile = await agent.getProfile({ actor: handle });
     return profile.data as Profile;
   } catch (error) {
+    toast({
+      title: "Profile fetch failed",
+      description: `Could not fetch profile for "${handle}". Please try again.`,
+      variant: "destructive",
+    });
     console.error("Profile fetch failed:", error);
     return null;
   }
@@ -37,6 +43,11 @@ export const searchActors = async (query: string, limit: number = 5): Promise<Pr
       followsCount: actor.followsCount,
     })) as Profile[];
   } catch (error) {
+    toast({
+      title: "Search Failed",
+      description: `Could not fetch suggestions for "${query}". Please try again.`,
+      variant: "destructive",
+    });
     console.error('Error fetching suggestions:', error);
     throw error;
   }
