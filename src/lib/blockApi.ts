@@ -1,4 +1,5 @@
 import { agent } from './api';
+import { toast } from "../hooks/use-toast";
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -21,6 +22,11 @@ export const blockUser = async (handle: string): Promise<boolean> => {
     console.log(`${handle} has been blocked.`);
     return true;
   } catch (error) {
+    toast({
+      title: "Failed to block user",
+      description: `Unable to block "${handle}". Please try again.`,
+      variant: "destructive",
+    });
     console.error('Failed to block user:', error);
     return false;
   }
@@ -70,6 +76,11 @@ export const blockUserFollowers = async (
 
     return true;
   } catch (error) {
+    toast({
+      title: "Mass blocking failed",
+      description: `Something went wrong. Please try again.`,
+      variant: "destructive",
+    });
     console.error("Mass blocking failed:", error);
     return false;
   }
