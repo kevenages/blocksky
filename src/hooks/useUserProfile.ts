@@ -1,7 +1,7 @@
 // src/hooks/useUserProfile.ts
 import { useState } from 'react';
 import { getProfile, searchActors } from '../lib/actorApi';
-import { blockUserFollowers } from '../lib/blockApi';
+import { blockUserFollowers, blockUserFollows } from '../lib/blockApi';
 
 interface UserProfile {
   handle: string;
@@ -24,12 +24,31 @@ const startBlockUserFollowers = async (
   setBlockProgress(0); // Reset progress
   try {
     await blockUserFollowers(handle, (progress: number, blockedCount: number) => {
+      //console.log(`Callback invoked: Progress - ${progress}, Count - ${blockedCount}`);
+      setBlockProgress(progress); // Update local progress
+      console.log('hahaha', progress);
+      console.log('hahah22222', blockedCount);
+      onProgress(progress, blockedCount); // Update via callback
+    });
+  } catch (error) {
+    console.error('Error blocking Followers:', error);
+  }
+};
+
+  // Updated startBlockUserFollows function
+const startBlockUserFollows = async (
+  handle: string,
+  onProgress: (progress: number, count: number) => void
+) => {
+  setBlockProgress(0); // Reset progress
+  try {
+    await blockUserFollows(handle, (progress: number, blockedCount: number) => {
       console.log(`Callback invoked: Progress - ${progress}, Count - ${blockedCount}`);
       setBlockProgress(progress); // Update local progress
       onProgress(progress, blockedCount); // Update via callback
     });
   } catch (error) {
-    console.error('Error blocking Followers:', error);
+    console.error('Error blocking Follows:', error);
   }
 };
 
@@ -66,5 +85,6 @@ const startBlockUserFollowers = async (
     setSuggestions,
     blockProgress,
     startBlockUserFollowers,
+    startBlockUserFollows,
   };
 }
