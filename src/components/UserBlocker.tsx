@@ -72,6 +72,15 @@ export default function UserBlocker() {
     setIsBlockingUser(false); // Re-enable "Block User" button
   };
 
+    const resetState = () => {
+      // Reset all state variables related to the profile
+      setIsBlockingUser(false);
+      setIsBlockingFollowers(false);
+      setIsBlockingFollowing(false);
+      setIsCompleted(false);
+      setBlockedCount(0);
+    };
+
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     setUsername(input);
@@ -85,6 +94,7 @@ export default function UserBlocker() {
   };
 
   const selectSuggestion = (suggestion: { handle: string }) => {
+    resetState();
     setUsername(suggestion.handle);
     clearSuggestions();
     loadUserProfile(suggestion.handle);
