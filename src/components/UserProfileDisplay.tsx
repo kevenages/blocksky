@@ -10,9 +10,12 @@ import HelpSheet from "./HelpSheet";
 import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Progress } from "../components/ui/progress";
 import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
-import Image from 'next/image'
+import Image from "next/image";
 
-// Define the UserProfile interface
+interface User {
+  handle: string;
+}
+
 interface UserProfile {
   displayName: string;
   handle: string;
@@ -30,9 +33,10 @@ interface UserProfileDisplayProps {
   blockProgress: number;
   isCompleted: boolean;
   blockedCount: number;
-  isBlockingUser: boolean; // Individual state for blocking user
-  isBlockingFollowers: boolean; // Individual state for blocking followers
-  isBlockingFollowing: boolean; // Individual state for blocking following
+  isBlockingUser: boolean;
+  isBlockingFollowers: boolean;
+  isBlockingFollowing: boolean;
+  mutuals: User[]; // Added mutuals as a prop
 }
 
 export default function UserProfileDisplay({
@@ -47,6 +51,7 @@ export default function UserProfileDisplay({
   isBlockingUser,
   isBlockingFollowers,
   isBlockingFollowing,
+  mutuals, // Destructure mutuals prop
 }: UserProfileDisplayProps) {
   const [hydrated, setHydrated] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -151,6 +156,11 @@ export default function UserProfileDisplay({
                 <AlertTitle>Success!</AlertTitle>
                 <AlertDescription>
                   You have successfully blocked {blockedCount.toLocaleString()} users.
+                  {mutuals.length > 0 && (
+                    <p className="mt-2 text-sm text-gray-500">
+                      {mutuals.length.toLocaleString()} mutuals were not blocked.
+                    </p>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
