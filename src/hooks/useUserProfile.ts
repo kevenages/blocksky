@@ -1,7 +1,9 @@
 // src/hooks/useUserProfile.ts
+import { useAuth } from '../hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { getProfile, searchActors } from '../lib/actorApi';
 import { fetchUserData, blockUserFollowers, blockUserFollows, User } from '../lib/blockApi';
+
 
 interface UserProfile {
   handle: string;
@@ -12,6 +14,7 @@ interface UserProfile {
 }
 
 export function useUserProfile() {
+  const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
   const [blockProgress, setBlockProgress] = useState(0);
@@ -19,15 +22,19 @@ export function useUserProfile() {
   // Effect to initialize user data
   useEffect(() => {
     const initializeUserData = async () => {
-      try {
-        await fetchUserData();
-      } catch (error) {
-        console.error("Error initializing BlockSky user data:", error);
-      }
-    };
+      console.log("Initializing user data with handle:", user?.handle);
+        if (!user?.handle) return;
 
-    initializeUserData();
-  }, []);
+        try {
+          await fetchUserData(user.handle);
+          console.log("User data successfully fetched for:", user.handle);
+        } catch (error) {
+          console.error("Error initializing user data:", error);
+        }
+      };
+
+      initializeUserData();
+  }, [user]);
 
   const startBlockUserFollowers = async (
     handle: string,
