@@ -1,5 +1,6 @@
 import { agent } from './api';
 import { toast } from "../hooks/use-toast";
+import { useAuth } from '../hooks/useAuth';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -19,9 +20,17 @@ let userFollowers: User[] = [];
 let userFollows: User[] = [];
 
 // Fetch the BlockSky user's followers and followings
-export const fetchUserData = async () => {
+export const fetchUserData = async (currentUserHandle: string) => {
+  if (!currentUserHandle) {
+    console.error("User handle is not provided for fetchUserData");
+    throw new Error("User handle is required");
+  }
+
   try {
-    [userFollowers, userFollows] = await Promise.all([getFollowers("kevenages.duhado.com"), getFollows("kevenages.duhado.com")]);
+    [userFollowers, userFollows] = await Promise.all([
+      getFollowers(currentUserHandle),
+      getFollows(currentUserHandle),
+    ]);
   } catch (error) {
     console.error("Error fetching BlockSky user's data:", error);
     throw error;
