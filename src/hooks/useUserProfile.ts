@@ -1,7 +1,9 @@
 // src/hooks/useUserProfile.ts
-import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useState, useEffect } from 'react';
 import { getProfile, searchActors } from '../lib/actorApi';
-import { blockUserFollowers, blockUserFollows } from '../lib/blockApi';
+import { fetchUserData, blockUserFollowers, blockUserFollows, User } from '../lib/blockApi';
+
 
 interface UserProfile {
   handle: string;
@@ -12,45 +14,64 @@ interface UserProfile {
 }
 
 export function useUserProfile() {
+  const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
   const [blockProgress, setBlockProgress] = useState(0);
 
-  // Updated startBlockUserFollowers function
-const startBlockUserFollowers = async (
-  handle: string,
-  onProgress: (progress: number, count: number) => void
-) => {
-  setBlockProgress(0); // Reset progress
-  try {
-    await blockUserFollowers(handle, (progress: number, blockedCount: number) => {
-      //console.log(`Callback invoked: Progress - ${progress}, Count - ${blockedCount}`);
-      setBlockProgress(progress); // Update local progress
-      console.log('hahaha', progress);
-      console.log('hahah22222', blockedCount);
-      onProgress(progress, blockedCount); // Update via callback
-    });
-  } catch (error) {
-    console.error('Error blocking Followers:', error);
-  }
-};
+  // Effect to initialize user data
+  useEffect(() => {
+    const initializeUserData = async () => {
+      console.log("Initializing user data with handle:", user?.handle);
+        if (!user?.handle) return;
 
-  // Updated startBlockUserFollows function
-const startBlockUserFollows = async (
-  handle: string,
-  onProgress: (progress: number, count: number) => void
-) => {
-  setBlockProgress(0); // Reset progress
-  try {
-    await blockUserFollows(handle, (progress: number, blockedCount: number) => {
-      console.log(`Callback invoked: Progress - ${progress}, Count - ${blockedCount}`);
-      setBlockProgress(progress); // Update local progress
-      onProgress(progress, blockedCount); // Update via callback
-    });
-  } catch (error) {
-    console.error('Error blocking Follows:', error);
-  }
-};
+        try {
+          await fetchUserData(user.handle);
+          console.log("User data successfully fetched for:", user.handle);
+        } catch (error) {
+          console.error("Error initializing user data:", error);
+        }
+      };
+
+      initializeUserData();
+  }, [user]);
+
+  const startBlockUserFollowers = async (
+    handle: string,
+    onProgress: (progress: number, count: number) => void
+  ): Promise<{ success: boolean; mutuals: User[] }> => {
+    setBlockProgress(0); // Reset progress
+
+    try {
+      const result = await blockUserFollowers(handle, (progress, blockedCount) => {
+        setBlockProgress(progress); // Update progress locally
+        onProgress(progress, blockedCount); // Callback for external updates
+      });
+      return result; // Should be { success, mutuals }
+    } catch (error) {
+      console.error('Error blocking followers:', error);
+      return { success: false, mutuals: [] }; // Ensure predictable structure
+    }
+  };
+
+  const startBlockUserFollows = async (
+    handle: string,
+    onProgress: (progress: number, count: number) => void
+  ): Promise<{ success: boolean; mutuals: User[] }> => {
+    setBlockProgress(0); // Reset progress
+
+    try {
+      const result = await blockUserFollows(handle, (progress, blockedCount) => {
+        setBlockProgress(progress); // Update progress locally
+        onProgress(progress, blockedCount); // Callback for external updates
+      });
+      return result; // Should be { success, mutuals }
+    } catch (error) {
+      console.error('Error blocking follows:', error);
+      return { success: false, mutuals: [] }; // Ensure predictable structure
+    }
+  };
+
 
   const loadUserProfile = async (handle: string) => {
     try {
