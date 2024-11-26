@@ -6,6 +6,7 @@ import SuggestionsList from "./SuggestionsList";
 import UserProfileDisplay from "./UserProfileDisplay";
 import { useAuth } from "../hooks/useAuth";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { User } from "../lib/blockApi"; // Import User type
 
 export default function UserBlocker() {
   const [username, setUsername] = useState("");
@@ -15,6 +16,7 @@ export default function UserBlocker() {
   const [isBlockingFollowing, setIsBlockingFollowing] = useState(false); // Individual state
   const [isCompleted, setIsCompleted] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
+  const [mutuals, setMutuals] = useState<User[]>([]);
 
   const {
     userProfile,
@@ -39,14 +41,14 @@ export default function UserBlocker() {
     setIsCompleted(false);
     setBlockedCount(0);
 
-    await startBlockUserFollows(username, (progress, count) => {
-      if (progress === 100) {
-        setIsCompleted(true);
-        setBlockedCount(count);
-      }
+    const { success, mutuals: fetchedMutuals } = await startBlockUserFollows(username, (progress, count) => {
+      setBlockedCount(count); // Update blocked count
+      // Progress is managed in `useUserProfile`, so no need to call `setBlockProgress` here.
     });
 
-    setIsBlockingFollowing(false); // Re-enable "Block Following" button
+    setMutuals(fetchedMutuals);
+    setIsBlockingFollowing(false); // Re-enable button
+    setIsCompleted(success);
   };
 
   const handleBlockFollowers = async () => {
@@ -54,14 +56,14 @@ export default function UserBlocker() {
     setIsCompleted(false);
     setBlockedCount(0);
 
-    await startBlockUserFollowers(username, (progress, count) => {
-      if (progress === 100) {
-        setIsCompleted(true);
-        setBlockedCount(count);
-      }
+    const { success, mutuals: fetchedMutuals } = await startBlockUserFollowers(username, (progress, count) => {
+      setBlockedCount(count); // Update blocked count
+      // Progress is managed in `useUserProfile`, so no need to call `setBlockProgress` here.
     });
 
-    setIsBlockingFollowers(false); // Re-enable "Block Followers" button
+    setMutuals(fetchedMutuals);
+    setIsBlockingFollowers(false); // Re-enable button
+    setIsCompleted(success);
   };
 
   const onBlockUser = async () => {
@@ -72,14 +74,15 @@ export default function UserBlocker() {
     setIsBlockingUser(false); // Re-enable "Block User" button
   };
 
-    const resetState = () => {
-      // Reset all state variables related to the profile
-      setIsBlockingUser(false);
-      setIsBlockingFollowers(false);
-      setIsBlockingFollowing(false);
-      setIsCompleted(false);
-      setBlockedCount(0);
-    };
+  const resetState = () => {
+    // Reset all state variables related to the profile
+    setIsBlockingUser(false);
+    setIsBlockingFollowers(false);
+    setIsBlockingFollowing(false);
+    setIsCompleted(false);
+    setBlockedCount(0);
+    setMutuals([]);
+  };
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
@@ -128,6 +131,7 @@ export default function UserBlocker() {
           isBlockingUser={isBlockingUser}
           isBlockingFollowers={isBlockingFollowers}
           isBlockingFollowing={isBlockingFollowing}
+          mutuals={mutuals}
         />
       )}
     </div>
