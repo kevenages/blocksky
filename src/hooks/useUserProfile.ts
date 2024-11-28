@@ -1,9 +1,7 @@
-// src/hooks/useUserProfile.ts
 import { useAuth } from '../hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { getProfile, searchActors } from '../lib/actorApi';
 import { fetchUserData, blockUserFollowers, blockUserFollows, User } from '../lib/blockApi';
-
 
 interface UserProfile {
   handle: string;
@@ -18,22 +16,25 @@ export function useUserProfile() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
   const [blockProgress, setBlockProgress] = useState(0);
+  const [isDataInitialized, setIsDataInitialized] = useState(false); // New state for initialization
 
   // Effect to initialize user data
   useEffect(() => {
     const initializeUserData = async () => {
       console.log("Initializing user data with handle:", user?.handle);
-        if (!user?.handle) return;
+      if (!user?.handle) return;
 
-        try {
-          await fetchUserData(user.handle);
-          console.log("User data successfully fetched for:", user.handle);
-        } catch (error) {
-          console.error("Error initializing user data:", error);
-        }
-      };
+      try {
+        await fetchUserData(user.handle);
+        console.log("User data successfully fetched for:", user.handle);
+        setIsDataInitialized(true); // Mark as initialized
+      } catch (error) {
+        console.error("Error initializing user data:", error);
+        setIsDataInitialized(false); // Ensure proper state in case of failure
+      }
+    };
 
-      initializeUserData();
+    initializeUserData();
   }, [user]);
 
   const startBlockUserFollowers = async (
@@ -49,7 +50,7 @@ export function useUserProfile() {
       });
       return result; // Should be { success, mutuals }
     } catch (error) {
-      console.error('Error blocking followers:', error);
+      console.error("Error blocking followers:", error);
       return { success: false, mutuals: [] }; // Ensure predictable structure
     }
   };
@@ -67,18 +68,17 @@ export function useUserProfile() {
       });
       return result; // Should be { success, mutuals }
     } catch (error) {
-      console.error('Error blocking follows:', error);
+      console.error("Error blocking follows:", error);
       return { success: false, mutuals: [] }; // Ensure predictable structure
     }
   };
-
 
   const loadUserProfile = async (handle: string) => {
     try {
       const profile = await getProfile(handle);
       setUserProfile(profile);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error("Error fetching user profile:", error);
     }
   };
 
@@ -88,7 +88,7 @@ export function useUserProfile() {
       setSuggestions(results);
       return results;
     } catch (error) {
-      console.error('Error fetching suggestions:', error);
+      console.error("Error fetching suggestions:", error);
       return [];
     }
   };
@@ -105,6 +105,7 @@ export function useUserProfile() {
     clearSuggestions,
     setSuggestions,
     blockProgress,
+    isDataInitialized,
     startBlockUserFollowers,
     startBlockUserFollows,
   };

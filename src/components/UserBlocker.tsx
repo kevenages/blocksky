@@ -6,14 +6,15 @@ import SuggestionsList from "./SuggestionsList";
 import UserProfileDisplay from "./UserProfileDisplay";
 import { useAuth } from "../hooks/useAuth";
 import { useUserProfile } from "../hooks/useUserProfile";
-import { User } from "../lib/blockApi"; // Import User type
+import { User } from "../lib/blockApi";
 
 export default function UserBlocker() {
   const [username, setUsername] = useState("");
   const [hydrated, setHydrated] = useState(false);
-  const [isBlockingUser, setIsBlockingUser] = useState(false); // Individual state
-  const [isBlockingFollowers, setIsBlockingFollowers] = useState(false); // Individual state
-  const [isBlockingFollowing, setIsBlockingFollowing] = useState(false); // Individual state
+  const [loading, setLoading] = useState(false); // Manage loading state
+  const [isBlockingUser, setIsBlockingUser] = useState(false);
+  const [isBlockingFollowers, setIsBlockingFollowers] = useState(false);
+  const [isBlockingFollowing, setIsBlockingFollowing] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
   const [mutuals, setMutuals] = useState<User[]>([]);
@@ -28,6 +29,7 @@ export default function UserBlocker() {
     startBlockUserFollowers,
     startBlockUserFollows,
     blockProgress,
+    isDataInitialized,
   } = useUserProfile();
 
   const { isLoggedIn } = useAuth();
@@ -37,45 +39,42 @@ export default function UserBlocker() {
   }, []);
 
   const handleBlockFollows = async () => {
-    setIsBlockingFollowing(true); // Disable "Block Following" button
+    setIsBlockingFollowing(true);
     setIsCompleted(false);
     setBlockedCount(0);
 
     const { success, mutuals: fetchedMutuals } = await startBlockUserFollows(username, (progress, count) => {
-      setBlockedCount(count); // Update blocked count
-      // Progress is managed in `useUserProfile`, so no need to call `setBlockProgress` here.
+      setBlockedCount(count);
     });
 
     setMutuals(fetchedMutuals);
-    setIsBlockingFollowing(false); // Re-enable button
+    setIsBlockingFollowing(false);
     setIsCompleted(success);
   };
 
   const handleBlockFollowers = async () => {
-    setIsBlockingFollowers(true); // Disable "Block Followers" button
+    setIsBlockingFollowers(true);
     setIsCompleted(false);
     setBlockedCount(0);
 
     const { success, mutuals: fetchedMutuals } = await startBlockUserFollowers(username, (progress, count) => {
-      setBlockedCount(count); // Update blocked count
-      // Progress is managed in `useUserProfile`, so no need to call `setBlockProgress` here.
+      setBlockedCount(count);
     });
 
     setMutuals(fetchedMutuals);
-    setIsBlockingFollowers(false); // Re-enable button
+    setIsBlockingFollowers(false);
     setIsCompleted(success);
   };
 
   const onBlockUser = async () => {
-    setIsBlockingUser(true); // Disable "Block User" button
+    setIsBlockingUser(true);
     if (userProfile) {
       console.log(`${userProfile.handle} has been blocked.`);
     }
-    setIsBlockingUser(false); // Re-enable "Block User" button
+    setIsBlockingUser(false);
   };
 
   const resetState = () => {
-    // Reset all state variables related to the profile
     setIsBlockingUser(false);
     setIsBlockingFollowers(false);
     setIsBlockingFollowing(false);
@@ -96,11 +95,13 @@ export default function UserBlocker() {
     }
   };
 
-  const selectSuggestion = (suggestion: { handle: string }) => {
+  const selectSuggestion = async (suggestion: { handle: string }) => {
     resetState();
     setUsername(suggestion.handle);
     clearSuggestions();
-    loadUserProfile(suggestion.handle);
+    setLoading(true); // Set loading to true
+    await loadUserProfile(suggestion.handle); // Load user profile
+    setLoading(false); // Set loading to false after fetching
   };
 
   if (!hydrated) return null;
@@ -115,7 +116,7 @@ export default function UserBlocker() {
         placeholder="Find by Bluesky name or handle"
         className="border border-gray-300 rounded-md w-full max-w-md px-4 py-2 mt-4 mb-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         autoComplete="off"
-        disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing} // Disable input when blocking
+        disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
       />
       <SuggestionsList suggestions={suggestions} onSelect={selectSuggestion} />
       {userProfile && (
@@ -132,6 +133,8 @@ export default function UserBlocker() {
           isBlockingFollowers={isBlockingFollowers}
           isBlockingFollowing={isBlockingFollowing}
           mutuals={mutuals}
+          loading={loading}
+          isDataInitialized={isDataInitialized}
         />
       )}
     </div>
