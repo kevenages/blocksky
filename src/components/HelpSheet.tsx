@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link'
 import Image from 'next/image'
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetDescription, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
 import { FaQuestionCircle } from 'react-icons/fa';
 import { RxOpenInNewWindow } from "react-icons/rx";
@@ -20,6 +20,7 @@ export default function HelpSheet() {
       <SheetContent side="right" className="min-w-[40vw] overflow-auto">
         <SheetHeader>
           <SheetTitle>How to set up an App Password</SheetTitle>
+          <SheetDescription />
         </SheetHeader>
         <div className="mt-4">
           <Alert className="my-4">
