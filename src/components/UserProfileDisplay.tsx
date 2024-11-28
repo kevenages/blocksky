@@ -5,16 +5,13 @@ import { useAuth } from "../hooks/useAuth";
 import { getProfile } from "../lib/actorApi";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "../components/ui/card";
 import HelpSheet from "./HelpSheet";
-import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
+import { Card, CardContent, CardFooter, CardHeader } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
+import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
+import { TbLoader3 } from "react-icons/tb";
 import Image from "next/image";
-
-interface User {
-  handle: string;
-}
 
 interface UserProfile {
   displayName: string;
@@ -36,7 +33,9 @@ interface UserProfileDisplayProps {
   isBlockingUser: boolean;
   isBlockingFollowers: boolean;
   isBlockingFollowing: boolean;
-  mutuals: User[]; // Added mutuals as a prop
+  mutuals: { handle: string }[];
+  loading: boolean;
+  isDataInitialized: boolean;
 }
 
 export default function UserProfileDisplay({
@@ -51,7 +50,9 @@ export default function UserProfileDisplay({
   isBlockingUser,
   isBlockingFollowers,
   isBlockingFollowing,
-  mutuals, // Destructure mutuals prop
+  mutuals,
+  loading,
+  isDataInitialized,
 }: UserProfileDisplayProps) {
   const [hydrated, setHydrated] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -73,7 +74,9 @@ export default function UserProfileDisplay({
     loadProfile();
   }, [handle]);
 
-  const handleLogin = () => login(accountHandle, appPassword);
+  const handleLogin = async () => {
+    await login(accountHandle, appPassword);
+  };
 
   if (!hydrated) return null;
 
@@ -119,56 +122,78 @@ export default function UserProfileDisplay({
       </CardHeader>
       <CardContent className="border-b border-gray-200 p-0" />
       <CardFooter className="flex flex-col items-center space-y-4 py-4">
-        {isLoggedIn ? (
-          <div className="flex flex-col space-y-4 w-full">
-            <Button
-              onClick={onBlockUser}
-              variant="secondary"
-              className="w-full"
-              disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
-            >
-              {isBlockingUser ? "Blocking User..." : "Block User"}
-            </Button>
-            <Button
-              onClick={onBlockFollowers}
-              variant="destructive"
-              className="w-full"
-              disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
-            >
-              {isBlockingFollowers ? "Blocking Followers..." : "Block Followers"}
-            </Button>
-            <Button
-              onClick={onBlockFollows}
-              variant="destructive"
-              className="w-full"
-              disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
-            >
-              {isBlockingFollowing ? "Blocking Following..." : "Block Following"}
-            </Button>
-            {(isBlockingFollowers || isBlockingFollowing) && (
-              <div className="w-full">
-                <Progress value={blockProgress} />
-                <p className="text-center mt-2">{Math.round(blockProgress)}% Complete</p>
+        {loading ? (
+          <p className="text-center text-gray-500">Loading data...</p>
+        ) : isLoggedIn ? (
+          isDataInitialized ? (
+            <div className="flex flex-col space-y-4 w-full">
+              <Button
+                onClick={onBlockUser}
+                variant="secondary"
+                className="w-full"
+                disabled={
+                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+                }
+              >
+                {isBlockingUser ? "Blocking User..." : "Block User"}
+              </Button>
+              <Button
+                onClick={onBlockFollowers}
+                variant="destructive"
+                className="w-full"
+                disabled={
+                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+                }
+              >
+                {isBlockingFollowers ? "Blocking Followers..." : "Block Followers"}
+              </Button>
+              <Button
+                onClick={onBlockFollows}
+                variant="destructive"
+                className="w-full"
+                disabled={
+                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+                }
+              >
+                {isBlockingFollowing ? "Blocking Following..." : "Block Following"}
+              </Button>
+              {(isBlockingFollowers || isBlockingFollowing) && (
+                <div className="w-full">
+                  <Progress value={blockProgress} />
+                  <p className="text-center mt-2">{Math.round(blockProgress)}% Complete</p>
+                </div>
+              )}
+              {isCompleted && (
+                <Alert className="w-full">
+                  <AlertTitle>Success!</AlertTitle>
+                  <AlertDescription>
+                    You have successfully blocked {blockedCount.toLocaleString()} users.
+                    {mutuals.length > 0 && (
+                      <p className="mt-2 text-sm text-gray-500">
+                        {mutuals.length.toLocaleString()} mutuals were not blocked.
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-center items-center">
+                <TbLoader3 size={18} className="spin text-blue-500" />
               </div>
-            )}
-            {isCompleted && (
-              <Alert className="w-full">
-                <AlertTitle>Success!</AlertTitle>
-                <AlertDescription>
-                  You have successfully blocked {blockedCount.toLocaleString()} users.
-                  {mutuals.length > 0 && (
-                    <p className="mt-2 text-sm text-gray-500">
-                      {mutuals.length.toLocaleString()} mutuals were not blocked.
-                    </p>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+              <div className="text-center text-gray-500">
+                  Initializing your profile...
+              </div>
+            </div>
+          )
         ) : (
           <div className="flex flex-col items-center space-y-2 w-full">
             <div className="flex items-center space-x-2 mb-2">
-              <span>To block users, log in with your Bluesky App Password. Note: This is different from your main Bluesky password.</span>
+              <span>
+                To block users, log in with your Bluesky App Password. Note: This is different
+                from your main Bluesky password.
+              </span>
               <HelpSheet />
             </div>
             <input
