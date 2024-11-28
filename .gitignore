@@ -21,6 +21,7 @@
 /build
 .cache/
 dist/
+.next/cache
 
 # misc
 .DS_Store
