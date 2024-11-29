@@ -28,19 +28,19 @@ export const CookieConsentBanner: React.FC = () => {
   };
 
   const loadAnalytics = () => {
-    // Example: Load Google Analytics
-    if (typeof window !== 'undefined' && !window['gaInitialized']) {
-      window['gaInitialized'] = true;
-      // Insert your Google Analytics setup code here
-      console.log('Google Analytics loaded');
-    }
+    const loadAnalytics = () => {
+      if (typeof window !== 'undefined' && !window.gaInitialized) {
+        window.gaInitialized = true;
+        console.log('Google Analytics loaded');
+        // Insert Google Analytics setup code here
+      }
 
-    // Example: Load Microsoft Clarity
-    if (typeof window !== 'undefined' && !window['clarityInitialized']) {
-      window['clarityInitialized'] = true;
-      // Insert your Microsoft Clarity setup code here
-      console.log('Microsoft Clarity loaded');
-    }
+      if (typeof window !== 'undefined' && !window.clarityInitialized) {
+        window.clarityInitialized = true;
+        console.log('Microsoft Clarity loaded');
+        // Insert Microsoft Clarity setup code here
+      }
+    };
   };
 
   useEffect(() => {
