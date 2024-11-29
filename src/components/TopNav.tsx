@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { FiLogOut, FiGithub } from 'react-icons/fi';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import Link from 'next/link'
+import CookiePolicySheet from './CookiePolicySheet';
+import PrivacyPolicySheet from './PrivacyPolicySheet';
 
 export default function TopNav() {
   const { isLoggedIn, logout } = useAuth();
@@ -16,6 +18,8 @@ export default function TopNav() {
 
   return (
     <nav className="w-full flex justify-end items-center px-6 py-4 bg-white space-x-8">
+      <PrivacyPolicySheet />
+      <CookiePolicySheet />
       <Tooltip>
         <TooltipTrigger asChild>
           <a
