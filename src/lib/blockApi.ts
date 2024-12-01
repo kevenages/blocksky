@@ -1,6 +1,6 @@
-import { agent } from './api';
+import { agent, authAgent, withAuthHeaders } from './api';
 import { toast } from "../hooks/use-toast";
-import { useAuth } from '../hooks/useAuth';
+//import { useAuth } from '../hooks/useAuth';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -12,6 +12,7 @@ interface PaginatedResponse<T> {
   data: {
     followers?: T[];
     follows?: T[];
+    blocks?: T[]; // Add blocks here
     cursor?: string;
   };
 }
@@ -45,12 +46,37 @@ export const identifyMutuals = (list: User[]): User[] => {
   );
 };
 
+export const getBlockedUsers = async (): Promise<User[]> => {
+  try {
+    const blockedUsers: User[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const response = await authAgent.app.bsky.graph.getBlocks(
+        { cursor, limit: 50 },
+        { headers: withAuthHeaders() }
+      );
+
+      if (response.data.blocks) {
+        blockedUsers.push(...response.data.blocks);
+      }
+      
+      cursor = response.data.cursor;
+    } while (cursor);
+
+    return blockedUsers;
+  } catch (error) {
+    console.error('Error fetching blocked users:', error);
+    throw error;
+  }
+};
+
 // Block a single user by handle
 export const blockUser = async (handle: string): Promise<boolean> => {
   try {
     // Uncomment the next line to block users when ready
     // await agent.blockUser({ handle });
-    console.log(`${handle} has been blocked.`);
+    //console.log(`${handle} has been blocked.`);
     return true;
   } catch (error) {
     toast({
@@ -117,67 +143,64 @@ export const getFollows = async (handle: string): Promise<User[]> => {
 export const blockUserFollowers = async (
   targetHandle: string,
   onProgress: (progress: number, count: number) => void
-): Promise<{ success: boolean; mutuals: User[] }> => {
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
   try {
-    // Fetch followers of the target user
-    const followers = await getFollowers(targetHandle);
+    const followers = await getFollowers(targetHandle); // Get followers
+    const blockedUsers = await getBlockedUsers(); // Get already blocked users
+    const mutuals = identifyMutuals(followers); // Identify mutuals
 
-    // Identify mutuals (BlockSky user's mutuals)
-    const mutuals = identifyMutuals(followers);
-
-    // Exclude mutuals from the block list
     const usersToBlock = followers.filter(
-      (follower) => !mutuals.some((mutual) => mutual.handle === follower.handle)
+      (follower) =>
+        !mutuals.some((mutual) => mutual.handle === follower.handle) &&
+        !blockedUsers.some((blocked) => blocked.handle === follower.handle)
     );
 
-    const totalUsers = usersToBlock.length;
+    const alreadyBlockedCount = followers.length - usersToBlock.length;
+    const totalUsers = usersToBlock.length || 1; // Prevent divide-by-zero
 
-    // Block each user and update progress
     for (let i = 0; i < usersToBlock.length; i++) {
-      const user = usersToBlock[i];
-      await blockUser(user.handle); // Block the user
+      await blockUser(usersToBlock[i].handle);
       const progress = ((i + 1) / totalUsers) * 100;
-      onProgress(progress, i + 1); // Call progress callback after each block
-      await sleep(50); // Small delay for UI updates (optional)
+      onProgress(progress, i + 1); // Update progress
+      await sleep(50); // Add delay for UI updates
     }
 
-    return { success: true, mutuals };
+    return { success: true, mutuals, alreadyBlockedCount };
   } catch (error) {
     console.error("Error in blockUserFollowers:", error);
-    return { success: false, mutuals: [] };
+    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
   }
 };
+
 
 export const blockUserFollows = async (
   targetHandle: string,
   onProgress: (progress: number, count: number) => void
-): Promise<{ success: boolean; mutuals: User[] }> => {
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
   try {
-    // Fetch followings of the target user
-    const follows = await getFollows(targetHandle);
+    const follows = await getFollows(targetHandle); // Get follows
+    const blockedUsers = await getBlockedUsers(); // Get already blocked users
+    const mutuals = identifyMutuals(follows); // Identify mutuals
 
-    // Identify mutuals (BlockSky user's mutuals)
-    const mutuals = identifyMutuals(follows);
-
-    // Exclude mutuals from the block list
     const usersToBlock = follows.filter(
-      (follow) => !mutuals.some((mutual) => mutual.handle === follow.handle)
+      (follow) =>
+        !mutuals.some((mutual) => mutual.handle === follow.handle) &&
+        !blockedUsers.some((blocked) => blocked.handle === follow.handle)
     );
 
-    const totalUsers = usersToBlock.length;
+    const alreadyBlockedCount = follows.length - usersToBlock.length;
+    const totalUsers = usersToBlock.length || 1; // Prevent divide-by-zero
 
-    // Block each user and update progress
     for (let i = 0; i < usersToBlock.length; i++) {
-      const user = usersToBlock[i];
-      await blockUser(user.handle); // Block the user
+      await blockUser(usersToBlock[i].handle);
       const progress = ((i + 1) / totalUsers) * 100;
-      onProgress(progress, i + 1); // Call progress callback after each block
-      await sleep(50); // Small delay for UI updates (optional)
+      onProgress(progress, i + 1); // Update progress
+      await sleep(50); // Add delay for UI updates
     }
 
-    return { success: true, mutuals };
+    return { success: true, mutuals, alreadyBlockedCount };
   } catch (error) {
     console.error("Error in blockUserFollows:", error);
-    return { success: false, mutuals: [] };
+    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
   }
 };
