@@ -1,5 +1,6 @@
 import { agent, authAgent, withAuthHeaders } from './api';
 import { toast } from "../hooks/use-toast";
+import Cookies from 'js-cookie';
 //import { useAuth } from '../hooks/useAuth';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -149,8 +150,11 @@ export const blockUserFollowers = async (
     const blockedUsers = await getBlockedUsers(); // Get already blocked users
     const mutuals = identifyMutuals(followers); // Identify mutuals
 
+    const loggedInUserHandle = Cookies.get("userHandle"); // Fetch the logged-in user's handle
+
     const usersToBlock = followers.filter(
       (follower) =>
+        follower.handle !== loggedInUserHandle && // Exclude logged-in user
         !mutuals.some((mutual) => mutual.handle === follower.handle) &&
         !blockedUsers.some((blocked) => blocked.handle === follower.handle)
     );
@@ -172,7 +176,6 @@ export const blockUserFollowers = async (
   }
 };
 
-
 export const blockUserFollows = async (
   targetHandle: string,
   onProgress: (progress: number, count: number) => void
@@ -182,8 +185,11 @@ export const blockUserFollows = async (
     const blockedUsers = await getBlockedUsers(); // Get already blocked users
     const mutuals = identifyMutuals(follows); // Identify mutuals
 
+    const loggedInUserHandle = Cookies.get("userHandle");
+
     const usersToBlock = follows.filter(
       (follow) =>
+        follow.handle !== loggedInUserHandle && // Exclude logged-in user
         !mutuals.some((mutual) => mutual.handle === follow.handle) &&
         !blockedUsers.some((blocked) => blocked.handle === follow.handle)
     );
