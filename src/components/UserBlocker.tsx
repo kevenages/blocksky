@@ -30,6 +30,7 @@ export default function UserBlocker() {
     startBlockUserFollows,
     blockProgress,
     isDataInitialized,
+    alreadyBlockedCount,
   } = useUserProfile();
 
   const { isLoggedIn } = useAuth();
@@ -69,7 +70,7 @@ export default function UserBlocker() {
   const onBlockUser = async () => {
     setIsBlockingUser(true);
     if (userProfile) {
-      console.log(`${userProfile.handle} has been blocked.`);
+      //console.log(`${userProfile.handle} has been blocked.`);
     }
     setIsBlockingUser(false);
   };
@@ -135,6 +136,7 @@ export default function UserBlocker() {
           mutuals={mutuals}
           loading={loading}
           isDataInitialized={isDataInitialized}
+          alreadyBlockedCount={alreadyBlockedCount}
         />
       )}
     </div>

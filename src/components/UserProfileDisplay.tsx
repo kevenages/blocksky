@@ -36,6 +36,7 @@ interface UserProfileDisplayProps {
   mutuals: { handle: string }[];
   loading: boolean;
   isDataInitialized: boolean;
+  alreadyBlockedCount: number;
 }
 
 export default function UserProfileDisplay({
@@ -53,6 +54,7 @@ export default function UserProfileDisplay({
   mutuals,
   loading,
   isDataInitialized,
+  alreadyBlockedCount,
 }: UserProfileDisplayProps) {
   const [hydrated, setHydrated] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -164,13 +166,18 @@ export default function UserProfileDisplay({
                 </div>
               )}
               {isCompleted && (
-                <Alert className="w-full">
+                <Alert className="w-full text-left">
                   <AlertTitle>Success!</AlertTitle>
-                  <AlertDescription>
+                  <AlertDescription className="pt-4">
                     You have successfully blocked {blockedCount.toLocaleString()} users.
                     {mutuals.length > 0 && (
-                      <p className="mt-2 text-sm text-gray-500">
+                      <p className="mt-1">
                         {mutuals.length.toLocaleString()} mutuals were not blocked.
+                      </p>
+                    )}
+                    {alreadyBlockedCount && (
+                      <p className="mt-1">
+                        {alreadyBlockedCount} users were already blocked.
                       </p>
                     )}
                   </AlertDescription>
