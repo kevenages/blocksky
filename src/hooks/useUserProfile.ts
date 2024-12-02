@@ -19,22 +19,21 @@ export function useUserProfile() {
   const [isDataInitialized, setIsDataInitialized] = useState(false);
   const [alreadyBlockedCount, setAlreadyBlockedCount] = useState(0);
 
-  // Effect to initialize user data
+  const initializeUserData = async (handle?: string) => {
+    const userHandle = handle || user?.handle;
+    if (!userHandle) return;
+
+    try {
+      await fetchUserData(userHandle);
+      console.log("User data successfully fetched for:", userHandle);
+      setIsDataInitialized(true);
+    } catch (error) {
+      console.error("Error initializing user data:", error);
+      setIsDataInitialized(false);
+    }
+  };
+
   useEffect(() => {
-    const initializeUserData = async () => {
-      console.log("Initializing user data with handle:", user?.handle);
-      if (!user?.handle) return;
-
-      try {
-        await fetchUserData(user.handle);
-        console.log("User data successfully fetched for:", user.handle);
-        setIsDataInitialized(true); // Mark as initialized
-      } catch (error) {
-        console.error("Error initializing user data:", error);
-        setIsDataInitialized(false); // Ensure proper state in case of failure
-      }
-    };
-
     initializeUserData();
   }, [user]);
 
@@ -113,5 +112,6 @@ const startBlockUserFollows = async (
     startBlockUserFollowers,
     startBlockUserFollows,
     alreadyBlockedCount,
+    initializeUserData,
   };
 }
