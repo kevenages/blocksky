@@ -175,7 +175,7 @@ export default function UserProfileDisplay({
                         {mutuals.length.toLocaleString()} mutuals were not blocked.
                       </p>
                     )}
-                    {alreadyBlockedCount && (
+                    {alreadyBlockedCount > 0 && (
                       <p className="mt-1">
                         {alreadyBlockedCount} users were already blocked.
                       </p>
