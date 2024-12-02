@@ -10,8 +10,10 @@ import { User } from "../lib/blockApi";
 
 export default function UserBlocker() {
   const [username, setUsername] = useState("");
+  const [accountHandle, setAccountHandle] = useState(""); // Added for login handle
+  const [appPassword, setAppPassword] = useState(""); // Added for login password
   const [hydrated, setHydrated] = useState(false);
-  const [loading, setLoading] = useState(false); // Manage loading state
+  const [loading, setLoading] = useState(false);
   const [isBlockingUser, setIsBlockingUser] = useState(false);
   const [isBlockingFollowers, setIsBlockingFollowers] = useState(false);
   const [isBlockingFollowing, setIsBlockingFollowing] = useState(false);
@@ -33,11 +35,20 @@ export default function UserBlocker() {
     alreadyBlockedCount,
   } = useUserProfile();
 
-  const { isLoggedIn } = useAuth();
+  const { login, isLoggedIn } = useAuth();
+  const { initializeUserData } = useUserProfile();
 
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+const handleLogin = async () => {
+  const success = await login(accountHandle, appPassword);
+  if (success) {
+    console.log("User logged in. Initializing user data...");
+    await initializeUserData();
+  }
+};
 
   const handleBlockFollows = async () => {
     setIsBlockingFollowing(true);
@@ -70,7 +81,7 @@ export default function UserBlocker() {
   const onBlockUser = async () => {
     setIsBlockingUser(true);
     if (userProfile) {
-      //console.log(`${userProfile.handle} has been blocked.`);
+      // Perform block operation here
     }
     setIsBlockingUser(false);
   };
@@ -100,9 +111,9 @@ export default function UserBlocker() {
     resetState();
     setUsername(suggestion.handle);
     clearSuggestions();
-    setLoading(true); // Set loading to true
-    await loadUserProfile(suggestion.handle); // Load user profile
-    setLoading(false); // Set loading to false after fetching
+    setLoading(true);
+    await loadUserProfile(suggestion.handle);
+    setLoading(false);
   };
 
   if (!hydrated) return null;
