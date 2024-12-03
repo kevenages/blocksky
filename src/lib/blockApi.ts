@@ -66,8 +66,13 @@ export const getBlockedUsers = async (): Promise<User[]> => {
 
     return blockedUsers;
   } catch (error) {
-    console.error('Error fetching blocked users:', error);
-    throw error;
+    if (error.message === "UpstreamFailure" || error.status === 502) {
+      console.error("Upstream failure. Retrying in 30 seconds...");
+      await sleep(500); // Wait 5 seconds before retrying
+    } else {
+      console.error("Error blocking user. Stopping operation:", error);
+      throw error; // Re-throw other errors to stop the operation
+    }
   }
 };
 
@@ -76,8 +81,13 @@ export const getDidFromHandle = async (handle: string): Promise<string | null> =
     const response = await agent.resolveHandle({ handle });
     return response?.data?.did || null;
   } catch (error) {
-    console.error("Error resolving DID for handle:", handle, error);
-    return null;
+    if (error.message === "UpstreamFailure" || error.status === 502) {
+      console.error("Upstream failure. Retrying in 30 seconds...");
+      await sleep(500); // Wait 5 seconds before retrying
+    } else {
+      console.error("Error blocking user. Stopping operation:", error);
+      throw error; // Re-throw other errors to stop the operation
+    }
   }
 };
 
