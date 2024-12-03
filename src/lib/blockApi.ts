@@ -1,7 +1,6 @@
 import { agent, authAgent, withAuthHeaders } from './api';
 import { toast } from "../hooks/use-toast";
 import Cookies from 'js-cookie';
-//import { useAuth } from '../hooks/useAuth';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -69,6 +68,16 @@ export const getBlockedUsers = async (): Promise<User[]> => {
   } catch (error) {
     console.error('Error fetching blocked users:', error);
     throw error;
+  }
+};
+
+export const getDidFromHandle = async (handle: string): Promise<string | null> => {
+  try {
+    const response = await agent.resolveHandle({ handle });
+    return response?.data?.did || null;
+  } catch (error) {
+    console.error("Error resolving DID for handle:", handle, error);
+    return null;
   }
 };
 
@@ -140,31 +149,45 @@ export const getFollows = async (handle: string): Promise<User[]> => {
   }
 };
 
-// Block all followers and following of a user
 export const blockUserFollowers = async (
   targetHandle: string,
   onProgress: (progress: number, count: number) => void
 ): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
   try {
+    
     const followers = await getFollowers(targetHandle); // Get followers
     const blockedUsers = await getBlockedUsers(); // Get already blocked users
     const mutuals = identifyMutuals(followers); // Identify mutuals
-
     const loggedInUserHandle = Cookies.get("userHandle"); // Fetch the logged-in user's handle
+    const loggedInUserDid = Cookies.get("userDID");
 
     const usersToBlock = followers.filter(
       (follower) =>
         follower.handle !== loggedInUserHandle && // Exclude logged-in user
-        !mutuals.some((mutual) => mutual.handle === follower.handle) &&
-        !blockedUsers.some((blocked) => blocked.handle === follower.handle)
+        !mutuals.some((mutual) => mutual.handle === follower.handle) && // Exclude mutuals
+        !blockedUsers.some((blocked) => blocked.handle === follower.handle) // Exclude already blocked
     );
 
     const alreadyBlockedCount = followers.length - usersToBlock.length;
     const totalUsers = usersToBlock.length || 1; // Prevent divide-by-zero
 
     for (let i = 0; i < usersToBlock.length; i++) {
-      await blockUser(usersToBlock[i].handle);
+      const userDid = await getDidFromHandle(usersToBlock[i].handle); // Resolve DID
+      if (userDid) {
+
+        const response = await authAgent.app.bsky.graph.block.create(
+          { repo: loggedInUserDid },
+          {
+            subject: userDid, // Block the user by DID
+            createdAt: new Date().toISOString(),
+          },
+        );
+        if (response.uri) {
+          console.log(`Blocked follower: ${usersToBlock[i].handle}`);
+        }
+      }
       const progress = ((i + 1) / totalUsers) * 100;
+      console.log("Blocking progress:", progress);
       onProgress(progress, i + 1); // Update progress
       await sleep(50); // Add delay for UI updates
     }
@@ -181,24 +204,35 @@ export const blockUserFollows = async (
   onProgress: (progress: number, count: number) => void
 ): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
   try {
-    const follows = await getFollows(targetHandle); // Get follows
+    const follows = await getFollows(targetHandle); // Get the list of users the target is following
     const blockedUsers = await getBlockedUsers(); // Get already blocked users
     const mutuals = identifyMutuals(follows); // Identify mutuals
-
-    const loggedInUserHandle = Cookies.get("userHandle");
+    const loggedInUserHandle = Cookies.get("userHandle"); // Get the logged-in user's handle
 
     const usersToBlock = follows.filter(
       (follow) =>
-        follow.handle !== loggedInUserHandle && // Exclude logged-in user
-        !mutuals.some((mutual) => mutual.handle === follow.handle) &&
-        !blockedUsers.some((blocked) => blocked.handle === follow.handle)
+        follow.handle !== loggedInUserHandle && // Exclude the logged-in user
+        !mutuals.some((mutual) => mutual.handle === follow.handle) && // Exclude mutuals
+        !blockedUsers.some((blocked) => blocked.handle === follow.handle) // Exclude already blocked users
     );
 
     const alreadyBlockedCount = follows.length - usersToBlock.length;
-    const totalUsers = usersToBlock.length || 1; // Prevent divide-by-zero
+    const totalUsers = usersToBlock.length || 1; // Prevent divide-by-zero errors
 
     for (let i = 0; i < usersToBlock.length; i++) {
-      await blockUser(usersToBlock[i].handle);
+      const userDid = await getDidFromHandle(usersToBlock[i].handle); // Resolve DID
+      if (userDid) {
+        const response = await authAgent.app.bsky.graph.block.create(
+          { repo: loggedInUserHandle },
+          {
+            subject: userDid, // Use the resolved DID
+            createdAt: new Date().toISOString(),
+          }
+        );
+        if (response.uri) {
+          console.log(`Blocked user: ${usersToBlock[i].handle}`);
+        }
+      }
       const progress = ((i + 1) / totalUsers) * 100;
       onProgress(progress, i + 1); // Update progress
       await sleep(50); // Add delay for UI updates
