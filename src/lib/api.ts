@@ -12,6 +12,11 @@ export const authAgent = new AtpAgent({
   service: 'https://bsky.social',
 });
 
+authAgent.api.setHeader(
+  'Authorization',
+  `Bearer ${Cookies.get('accessToken') || ''}`
+);
+
 // Helper function to dynamically set the Authorization header
 export const withAuthHeaders = (headers: Record<string, string> = {}) => {
   const accessToken = Cookies.get("accessToken");
