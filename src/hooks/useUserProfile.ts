@@ -1,7 +1,7 @@
-// src/hooks/useUserProfile.ts
-import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useState, useEffect } from 'react';
 import { getProfile, searchActors } from '../lib/actorApi';
-import { blockUserNetwork } from '../lib/blockApi';
+import { fetchUserData, blockUserFollowers, blockUserFollows, User } from '../lib/blockApi';
 
 interface UserProfile {
   handle: string;
@@ -12,33 +12,76 @@ interface UserProfile {
 }
 
 export function useUserProfile() {
+  const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
   const [blockProgress, setBlockProgress] = useState(0);
+  const [isDataInitialized, setIsDataInitialized] = useState(false);
+  const [alreadyBlockedCount, setAlreadyBlockedCount] = useState(0);
 
-  // Updated startBlockUserNetwork function
-const startBlockUserNetwork = async (
+  const initializeUserData = async (handle?: string) => {
+    const userHandle = handle || user?.handle;
+    if (!userHandle) return;
+
+    try {
+      await fetchUserData(userHandle);
+      console.log("User data successfully fetched for:", userHandle);
+      setIsDataInitialized(true);
+    } catch (error) {
+      console.error("Error initializing user data:", error);
+      setIsDataInitialized(false);
+    }
+  };
+
+  useEffect(() => {
+    initializeUserData();
+  }, [user]);
+
+const startBlockUserFollowers = async (
   handle: string,
   onProgress: (progress: number, count: number) => void
-) => {
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
   setBlockProgress(0); // Reset progress
   try {
-    await blockUserNetwork(handle, (progress: number, blockedCount: number) => {
-      console.log(`Callback invoked: Progress - ${progress}, Count - ${blockedCount}`);
-      setBlockProgress(progress); // Update local progress
-      onProgress(progress, blockedCount); // Update via callback
+    const result = await blockUserFollowers(handle, (progress, count) => {
+      setBlockProgress(progress); // Update progress locally
+      onProgress(progress, count); // Callback for external updates
     });
+    console.log('result.alreadyBlockedCount', result.alreadyBlockedCount);
+    setAlreadyBlockedCount(result.alreadyBlockedCount);
+    return result;
   } catch (error) {
-    console.error('Error blocking network:', error);
+    console.error("Error blocking followers:", error);
+    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
   }
 };
+
+const startBlockUserFollows = async (
+  handle: string,
+  onProgress: (progress: number, count: number) => void
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
+  setBlockProgress(0); // Reset progress
+
+  try {
+    const result = await blockUserFollows(handle, (progress, count) => {
+      setBlockProgress(progress); // Update progress locally
+      onProgress(progress, count); // Callback for external updates
+    });
+    setAlreadyBlockedCount(result.alreadyBlockedCount); // Store alreadyBlockedCount
+    return result;
+  } catch (error) {
+    console.error("Error blocking follows:", error);
+    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
+  }
+};
+
 
   const loadUserProfile = async (handle: string) => {
     try {
       const profile = await getProfile(handle);
       setUserProfile(profile);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error("Error fetching user profile:", error);
     }
   };
 
@@ -48,7 +91,7 @@ const startBlockUserNetwork = async (
       setSuggestions(results);
       return results;
     } catch (error) {
-      console.error('Error fetching suggestions:', error);
+      console.error("Error fetching suggestions:", error);
       return [];
     }
   };
@@ -65,6 +108,10 @@ const startBlockUserNetwork = async (
     clearSuggestions,
     setSuggestions,
     blockProgress,
-    startBlockUserNetwork,
+    isDataInitialized,
+    startBlockUserFollowers,
+    startBlockUserFollows,
+    alreadyBlockedCount,
+    initializeUserData,
   };
 }
