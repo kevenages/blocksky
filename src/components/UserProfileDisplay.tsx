@@ -162,7 +162,7 @@ export default function UserProfileDisplay({
               {(isBlockingFollowers || isBlockingFollowing) && (
                 <div className="w-full">
                   <Progress value={blockProgress} />
-                  <p className="text-center mt-2">{Math.round(blockProgress)}% Complete</p>
+                  <p className="text-center mt-2">{blockProgress.toFixed(1)}% Complete</p>
                 </div>
               )}
               {isCompleted && (
