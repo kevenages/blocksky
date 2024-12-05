@@ -12,6 +12,7 @@ import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
 import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { TbLoader3 } from "react-icons/tb";
 import Image from "next/image";
+import ConfirmAction from "@/components/ConfirmAction"; // Import ConfirmAction
 
 interface UserProfile {
   displayName: string;
@@ -23,7 +24,7 @@ interface UserProfile {
 
 interface UserProfileDisplayProps {
   handle: string;
-  onBlockUser: () => void;
+  onBlockUser: () => Promise<void>;
   onBlockFollowers: () => Promise<void>;
   onBlockFollows: () => Promise<void>;
   isLoggedIn: boolean;
@@ -129,36 +130,48 @@ export default function UserProfileDisplay({
         ) : isLoggedIn ? (
           isDataInitialized ? (
             <div className="flex flex-col space-y-4 w-full">
-              <Button
-                onClick={onBlockUser}
-                variant="secondary"
-                className="w-full"
-                disabled={
-                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+              <ConfirmAction
+                title="Block User"
+                description={`Are you sure you want to block the user "${userProfile?.handle}"? This action cannot be undone.`}
+                onConfirm={onBlockUser}
+                trigger={
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
+                  >
+                    {isBlockingUser ? "Blocking User..." : "Block User"}
+                  </Button>
                 }
-              >
-                {isBlockingUser ? "Blocking User..." : "Block User"}
-              </Button>
-              <Button
-                onClick={onBlockFollowers}
-                variant="destructive"
-                className="w-full"
-                disabled={
-                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+              />
+              <ConfirmAction
+                title="Block Followers"
+                description={`Are you sure you want to block all followers of "${userProfile?.handle}"? This action cannot be undone.`}
+                onConfirm={onBlockFollowers}
+                trigger={
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
+                  >
+                    {isBlockingFollowers ? "Blocking Followers..." : "Block Followers"}
+                  </Button>
                 }
-              >
-                {isBlockingFollowers ? "Blocking Followers..." : "Block Followers"}
-              </Button>
-              <Button
-                onClick={onBlockFollows}
-                variant="destructive"
-                className="w-full"
-                disabled={
-                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+              />
+              <ConfirmAction
+                title="Block Following"
+                description={`Are you sure you want to block all accounts followed by "${userProfile?.handle}"? This action cannot be undone.`}
+                onConfirm={onBlockFollows}
+                trigger={
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
+                  >
+                    {isBlockingFollowing ? "Blocking Following..." : "Block Following"}
+                  </Button>
                 }
-              >
-                {isBlockingFollowing ? "Blocking Following..." : "Block Following"}
-              </Button>
+              />
               {(isBlockingFollowers || isBlockingFollowing) && (
                 <div className="w-full">
                   <Progress value={blockProgress} />
