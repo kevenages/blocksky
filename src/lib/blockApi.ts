@@ -108,24 +108,6 @@ export const getDidFromHandle = async (handle: string): Promise<string | null> =
   }
 };
 
-// Block a single user by handle
-export const blockUser = async (handle: string): Promise<boolean> => {
-  try {
-    // Uncomment the next line to block users when ready
-    // await agent.blockUser({ handle });
-    //console.log(`${handle} has been blocked.`);
-    return true;
-  } catch (error) {
-    toast({
-      title: "Failed to block user",
-      description: `Unable to block "${handle}". Please try again.`,
-      variant: "destructive",
-    });
-    console.error('Failed to block user:', error);
-    return false;
-  }
-};
-
 export const getFollowers = async (handle: string): Promise<User[]> => {
   try {
     const followers: User[] = [];
