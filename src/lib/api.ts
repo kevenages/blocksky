@@ -20,7 +20,6 @@ authAgent.setHeader(
 // Helper function to dynamically set the Authorization header
 export const withAuthHeaders = (headers: Record<string, string> = {}) => {
   const accessToken = Cookies.get("accessToken");
-  console.log('accessToken', accessToken);
   if (accessToken) {
     return {
       ...headers,
