@@ -4,9 +4,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from '../hooks/useAuth';
-import TopNav from './TopNav';
 import Loader from './Loader';
 import { CookieConsentBanner } from './CookieConsentBanner';
+import { Badge } from "../components/ui/badge"
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -25,10 +25,9 @@ export default function ClientWrapper({ children }: { children: React.ReactNode 
 
   return (
     <AuthProvider>
-      <TopNav />
       <main className="w-full max-w-lg mx-auto p-8 text-center mt-2 relative">
         <h1 className="text-4xl font-bold text-blue-600 mb-4">
-          BlockSky
+          BlockSky <sup><Badge variant="outline">beta</Badge></sup>
         </h1>
         {children}
         <CookieConsentBanner />
