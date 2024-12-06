@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+### GitHub Page Write-Up for Blocksky.app
 
-## Getting Started
+---
 
-First, run the development server:
+# Blocksky.app 🚀
+
+![Next.js](https://img.shields.io/badge/Next.js-13.0-blue?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-18.0-61DAFB?style=for-the-badge&logo=react)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.0-06B6D4?style=for-the-badge&logo=tailwindcss)
+![TypeScript](https://img.shields.io/badge/TypeScript-4.0-3178C6?style=for-the-badge&logo=typescript)
+![Build Status](https://img.shields.io/github/actions/workflow/status/kevenages/blocksky/blocksky-app/build.yml?branch=main&style=for-the-badge)
+
+**Blocksky** is a streamlined tool designed to help you curate your Bluesky social experience. With Blocksky, you can:
+
+- Mass block an account's **followers**.
+- Mass block the **accounts they follow**.
+
+Take control of your digital environment and create a safer, more personalized online space.
+
+---
+
+## ✨ Features
+
+- **Mass Blocking**: Quickly block an account's followers or the accounts they follow with just a few clicks.
+- **User-Friendly Interface**: A clean and intuitive UI to help you get started effortlessly.
+- **Custom Search**: Simply type the handle of the account you want to block followers or following for.
+- **Bluesky Integration**: Built specifically for the Bluesky social platform.
+
+---
+
+## 🔧 Tech Stack
+
+- **Next.js**: For server-side rendering and React-based development.
+- **React**: To create a fast and interactive user experience.
+- **Tailwind CSS**: For responsive and customizable styling.
+- **TypeScript**: Ensures type safety and better development practices.
+
+---
+
+## 🛠 Installation
+
+To run the project locally:
 
 ```bash
+# Clone the repository
+git clone https://github.com/kevenages/blocksky/blocksky.app.git
+
+# Navigate into the directory
+cd blocksky.app
+
+# Install dependencies
+npm install
+
+# Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app will be available at `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🖼 Screenshots
 
-## Learn More
+| Feature                     | Screenshot            |
+| --------------------------- | --------------------- |
+| **Search for an Account**   | _Add screenshot here_ |
+| **Mass Blocking Followers** | _Add screenshot here_ |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📝 License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Blocksky is licensed under the [MIT License](LICENSE).
