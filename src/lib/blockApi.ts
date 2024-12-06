@@ -47,8 +47,8 @@ export const identifyMutuals = (list: User[]): User[] => {
 };
 
 export const getBlockedUsers = async (): Promise<User[]> => {
+  const blockedUsers: User[] = [];
   try {
-    const blockedUsers: User[] = [];
     let cursor: string | undefined;
 
     do {
@@ -60,19 +60,27 @@ export const getBlockedUsers = async (): Promise<User[]> => {
       if (response.data.blocks) {
         blockedUsers.push(...response.data.blocks);
       }
-      
       cursor = response.data.cursor;
     } while (cursor);
 
     return blockedUsers;
   } catch (error) {
-    if (error.message === "UpstreamFailure" || error.status === 502) {
-      console.error("Upstream failure. Retrying in 30 seconds...");
-      await sleep(500); // Wait 5 seconds before retrying
+    // Explicitly check if the error is an object with the expected properties
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      "status" in error
+    ) {
+      const typedError = error as { message: string; status: number };
+      if (typedError.message === "UpstreamFailure" || typedError.status === 502) {
+        console.error("Upstream failure. Retrying in 5 seconds...");
+        await sleep(500); // Wait 5 seconds before retrying
+      }
     } else {
-      console.error("Error blocking user. Stopping operation:", error);
-      throw error; // Re-throw other errors to stop the operation
+      console.error("Error fetching blocked users:", error);
     }
+    return blockedUsers; // Ensure the function always returns a value
   }
 };
 
@@ -81,31 +89,22 @@ export const getDidFromHandle = async (handle: string): Promise<string | null> =
     const response = await agent.resolveHandle({ handle });
     return response?.data?.did || null;
   } catch (error) {
-    if (error.message === "UpstreamFailure" || error.status === 502) {
-      console.error("Upstream failure. Retrying in 30 seconds...");
-      await sleep(500); // Wait 5 seconds before retrying
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      "status" in error
+    ) {
+      const typedError = error as { message: string; status: number };
+      if (typedError.message === "UpstreamFailure" || typedError.status === 502) {
+        console.error("Upstream failure. Retrying in 5 seconds...");
+        await sleep(500); // Wait 5 seconds before retrying
+      }
     } else {
-      console.error("Error blocking user. Stopping operation:", error);
+      console.error("Error resolving DID from handle:", error);
       throw error; // Re-throw other errors to stop the operation
     }
-  }
-};
-
-// Block a single user by handle
-export const blockUser = async (handle: string): Promise<boolean> => {
-  try {
-    // Uncomment the next line to block users when ready
-    // await agent.blockUser({ handle });
-    //console.log(`${handle} has been blocked.`);
-    return true;
-  } catch (error) {
-    toast({
-      title: "Failed to block user",
-      description: `Unable to block "${handle}". Please try again.`,
-      variant: "destructive",
-    });
-    console.error('Failed to block user:', error);
-    return false;
+    return null; // Return null if DID resolution fails
   }
 };
 

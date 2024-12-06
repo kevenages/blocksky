@@ -12,6 +12,7 @@ import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
 import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { TbLoader3 } from "react-icons/tb";
 import Image from "next/image";
+import ConfirmAction from "./ConfirmAction";
 
 interface UserProfile {
   displayName: string;
@@ -23,7 +24,6 @@ interface UserProfile {
 
 interface UserProfileDisplayProps {
   handle: string;
-  onBlockUser: () => void;
   onBlockFollowers: () => Promise<void>;
   onBlockFollows: () => Promise<void>;
   isLoggedIn: boolean;
@@ -41,7 +41,6 @@ interface UserProfileDisplayProps {
 
 export default function UserProfileDisplay({
   handle,
-  onBlockUser,
   onBlockFollowers,
   onBlockFollows,
   isLoggedIn,
@@ -61,7 +60,7 @@ export default function UserProfileDisplay({
   const [accountHandle, setAccountHandle] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const { login, errorMessage } = useAuth();
+  const { login, logout, errorMessage } = useAuth();
 
   useEffect(() => {
     setHydrated(true);
@@ -129,40 +128,38 @@ export default function UserProfileDisplay({
         ) : isLoggedIn ? (
           isDataInitialized ? (
             <div className="flex flex-col space-y-4 w-full">
-              <Button
-                onClick={onBlockUser}
-                variant="secondary"
-                className="w-full"
-                disabled={
-                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+              <ConfirmAction
+                title="Block Followers"
+                description={`Are you sure you want to block all followers of "${userProfile?.handle}"? This action cannot be undone.`}
+                onConfirm={onBlockFollowers}
+                trigger={
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
+                  >
+                    {isBlockingFollowers ? "Blocking Followers..." : "Block Followers"}
+                  </Button>
                 }
-              >
-                {isBlockingUser ? "Blocking User..." : "Block User"}
-              </Button>
-              <Button
-                onClick={onBlockFollowers}
-                variant="destructive"
-                className="w-full"
-                disabled={
-                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
+              />
+              <ConfirmAction
+                title="Block Following"
+                description={`Are you sure you want to block all accounts followed by "${userProfile?.handle}"? This action cannot be undone.`}
+                onConfirm={onBlockFollows}
+                trigger={
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
+                  >
+                    {isBlockingFollowing ? "Blocking Following..." : "Block Following"}
+                  </Button>
                 }
-              >
-                {isBlockingFollowers ? "Blocking Followers..." : "Block Followers"}
-              </Button>
-              <Button
-                onClick={onBlockFollows}
-                variant="destructive"
-                className="w-full"
-                disabled={
-                  isBlockingUser || isBlockingFollowers || isBlockingFollowing
-                }
-              >
-                {isBlockingFollowing ? "Blocking Following..." : "Block Following"}
-              </Button>
+              />
               {(isBlockingFollowers || isBlockingFollowing) && (
                 <div className="w-full">
                   <Progress value={blockProgress} />
-                  <p className="text-center mt-2">{Math.round(blockProgress)}% Complete</p>
+                  <p className="text-center mt-2">{blockProgress.toFixed(1)}% Complete</p>
                 </div>
               )}
               {isCompleted && (
@@ -198,7 +195,7 @@ export default function UserProfileDisplay({
           <div className="flex flex-col items-center space-y-2 w-full">
             <div className="flex items-center space-x-2 mb-2">
               <span>
-                To block users, log in with your Bluesky App Password. Note: This is different
+                To start blocking, sign in with your Bluesky App Password. Note: This is different
                 from your main Bluesky password.
               </span>
               <HelpSheet />
@@ -209,7 +206,7 @@ export default function UserProfileDisplay({
               onChange={(e) => setAccountHandle(e.target.value)}
               placeholder="Enter Bluesky handle for your account"
               className="border rounded w-full px-4 py-2"
-              autoComplete="off"
+              autoComplete="username"
             />
             <div className="relative w-full">
               <input
@@ -238,6 +235,7 @@ export default function UserProfileDisplay({
             {errorMessage && <p className="text-red-500">{errorMessage}</p>}
           </div>
         )}
+        
       </CardFooter>
     </Card>
   );

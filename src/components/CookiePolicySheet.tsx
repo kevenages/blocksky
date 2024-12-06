@@ -5,13 +5,17 @@ import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetDescription, SheetTitle, SheetTrigger } from '../components/ui/sheet';
 import { Button } from '../components/ui/button';
 
-export default function CookiePolicySheet() {
+interface CookiePolicySheetProps {
+  triggerClassName?: string;
+}
+
+export default function CookiePolicySheet({ triggerClassName }: CookiePolicySheetProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="link" size="lg">
-            Read our Cookie Policy
-        </Button>
+        <a className={triggerClassName} href="#">
+            Cookie Policy
+        </a>
       </SheetTrigger>
       <SheetContent side="right" className="min-w-[80vw] overflow-auto z-[300]">
         <SheetHeader>

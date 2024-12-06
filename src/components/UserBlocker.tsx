@@ -78,14 +78,6 @@ const handleLogin = async () => {
     setIsCompleted(success);
   };
 
-  const onBlockUser = async () => {
-    setIsBlockingUser(true);
-    if (userProfile) {
-      // Perform block operation here
-    }
-    setIsBlockingUser(false);
-  };
-
   const resetState = () => {
     setIsBlockingUser(false);
     setIsBlockingFollowers(false);
@@ -135,7 +127,6 @@ const handleLogin = async () => {
         <UserProfileDisplay
           handle={userProfile.handle}
           isLoggedIn={isLoggedIn}
-          onBlockUser={onBlockUser}
           onBlockFollowers={handleBlockFollowers}
           onBlockFollows={handleBlockFollows}
           blockProgress={blockProgress}
