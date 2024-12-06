@@ -9,7 +9,7 @@ import { FiGithub } from 'react-icons/fi';
 import { useAuth } from "../hooks/useAuth";
 import { FiLogOut } from 'react-icons/fi';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
-import Link from 'next/link'
+import Link from 'next/link';
 
 export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
