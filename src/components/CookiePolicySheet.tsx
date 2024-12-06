@@ -79,7 +79,7 @@ export default function CookiePolicySheet({ triggerClassName }: CookiePolicyShee
                         Use <Link href="https://tools.google.com/dlpage/gaoptout" target="_blank">Google Analytics Opt-Out Browser Add-On</Link>.
                     </li>
                     <li>
-                        Adjust tracking preferences as described in Microsoft Clarity’s documentation.
+                        Adjust tracking preferences as described in Microsoft Clarity's documentation.
                     </li>
                 </ul>
             </div>
