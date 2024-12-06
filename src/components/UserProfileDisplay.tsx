@@ -12,7 +12,7 @@ import { Alert, AlertTitle, AlertDescription } from "../components/ui/alert";
 import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { TbLoader3 } from "react-icons/tb";
 import Image from "next/image";
-import ConfirmAction from "@/components/ConfirmAction"; // Import ConfirmAction
+import ConfirmAction from "./ConfirmAction";
 
 interface UserProfile {
   displayName: string;
@@ -24,7 +24,6 @@ interface UserProfile {
 
 interface UserProfileDisplayProps {
   handle: string;
-  onBlockUser: () => Promise<void>;
   onBlockFollowers: () => Promise<void>;
   onBlockFollows: () => Promise<void>;
   isLoggedIn: boolean;
@@ -42,7 +41,6 @@ interface UserProfileDisplayProps {
 
 export default function UserProfileDisplay({
   handle,
-  onBlockUser,
   onBlockFollowers,
   onBlockFollows,
   isLoggedIn,
@@ -62,7 +60,7 @@ export default function UserProfileDisplay({
   const [accountHandle, setAccountHandle] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const { login, errorMessage } = useAuth();
+  const { login, logout, errorMessage } = useAuth();
 
   useEffect(() => {
     setHydrated(true);
@@ -131,20 +129,6 @@ export default function UserProfileDisplay({
           isDataInitialized ? (
             <div className="flex flex-col space-y-4 w-full">
               <ConfirmAction
-                title="Block User"
-                description={`Are you sure you want to block the user "${userProfile?.handle}"? This action cannot be undone.`}
-                onConfirm={onBlockUser}
-                trigger={
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
-                  >
-                    {isBlockingUser ? "Blocking User..." : "Block User"}
-                  </Button>
-                }
-              />
-              <ConfirmAction
                 title="Block Followers"
                 description={`Are you sure you want to block all followers of "${userProfile?.handle}"? This action cannot be undone.`}
                 onConfirm={onBlockFollowers}
@@ -211,7 +195,7 @@ export default function UserProfileDisplay({
           <div className="flex flex-col items-center space-y-2 w-full">
             <div className="flex items-center space-x-2 mb-2">
               <span>
-                To block users, log in with your Bluesky App Password. Note: This is different
+                To start blocking, sign in with your Bluesky App Password. Note: This is different
                 from your main Bluesky password.
               </span>
               <HelpSheet />
@@ -222,7 +206,7 @@ export default function UserProfileDisplay({
               onChange={(e) => setAccountHandle(e.target.value)}
               placeholder="Enter Bluesky handle for your account"
               className="border rounded w-full px-4 py-2"
-              autoComplete="off"
+              autoComplete="username"
             />
             <div className="relative w-full">
               <input
@@ -251,6 +235,7 @@ export default function UserProfileDisplay({
             {errorMessage && <p className="text-red-500">{errorMessage}</p>}
           </div>
         )}
+        
       </CardFooter>
     </Card>
   );
