@@ -14,6 +14,11 @@ import { TbLoader3 } from "react-icons/tb";
 import Image from "next/image";
 import ConfirmAction from "./ConfirmAction";
 import { getRandomShareText } from "../lib/shareText";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "../components/ui/hover-card"
 
 interface UserProfile {
   displayName: string;
@@ -132,6 +137,15 @@ export default function UserProfileDisplay({
         ) : isLoggedIn ? (
           isDataInitialized ? (
             <div className="flex flex-col space-y-4 w-full">
+              <p>
+                <span className="font-bold">Please Note</span>:{" "}
+                <HoverCard>
+                  <HoverCardTrigger className="cursor-help">Mutuals</HoverCardTrigger>
+                  <HoverCardContent>
+                    A mutual is someone you follow who also follows you back.
+                  </HoverCardContent>
+                </HoverCard>{" "} and accounts you’ve already blocked will be skipped.
+              </p>
               <ConfirmAction
                 title="Block Followers"
                 description={`Are you sure you want to block all followers of "${userProfile?.handle}"? This action cannot be undone.`}
