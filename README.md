@@ -1,7 +1,3 @@
-### GitHub Page Write-Up for Blocksky.app
-
----
-
 # Blocksky.app 🚀
 
 ![Next.js](https://img.shields.io/badge/Next.js-13.0-blue?style=for-the-badge&logo=next.js)
@@ -11,7 +7,9 @@
 
 ---
 
-[VIEW LIVE](https://blocksky.app)
+## 🌐 Live Demo
+
+[blocksky.app](https://blocksky.app)
 
 ---
 
@@ -61,15 +59,6 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:3000`.
-
----
-
-## 🖼 Screenshots
-
-| Feature                     | Screenshot            |
-| --------------------------- | --------------------- |
-| **Search for an Account**   | _Add screenshot here_ |
-| **Mass Blocking Followers** | _Add screenshot here_ |
 
 ---
 
