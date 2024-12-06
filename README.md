@@ -8,7 +8,12 @@
 ![React](https://img.shields.io/badge/React-18.0-61DAFB?style=for-the-badge&logo=react)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.0-06B6D4?style=for-the-badge&logo=tailwindcss)
 ![TypeScript](https://img.shields.io/badge/TypeScript-4.0-3178C6?style=for-the-badge&logo=typescript)
-![Build Status](https://img.shields.io/github/actions/workflow/status/kevenages/blocksky/blocksky-app/build.yml?branch=main&style=for-the-badge)
+
+---
+
+[VIEW LIVE](https://blocksky.app)
+
+---
 
 **Blocksky** is a streamlined tool designed to help you curate your Bluesky social experience. With Blocksky, you can:
 
@@ -70,4 +75,4 @@ The app will be available at `http://localhost:3000`.
 
 ## 📝 License
 
-Blocksky is licensed under the [MIT License](LICENSE).
+Blocksky is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
