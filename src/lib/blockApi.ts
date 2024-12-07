@@ -20,6 +20,10 @@ interface PaginatedResponse<T> {
 let userFollowers: User[] = [];
 let userFollows: User[] = [];
 
+const isWhitelisted = (handle: string): boolean => {
+  return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === "bsky.app";
+};
+
 // Fetch the BlockSky user's followers and followings
 export const fetchUserData = async (currentUserHandle: string) => {
   if (!currentUserHandle) {
@@ -173,6 +177,7 @@ export const blockUserFollowers = async (
     const usersToBlock = followers.filter(
       (follower) =>
         follower.handle !== loggedInUserHandle && // Exclude logged-in user
+        !isWhitelisted(follower.handle) &&
         !mutuals.some((mutual) => mutual.handle === follower.handle) && // Exclude mutuals
         !blockedUsers.some((blocked) => blocked.handle === follower.handle) // Exclude already blocked
     );
@@ -221,6 +226,7 @@ export const blockUserFollows = async (
     const usersToBlock = follows.filter(
       (follow) =>
         follow.handle !== loggedInUserHandle && // Exclude the logged-in user
+        !isWhitelisted(follow.handle) &&
         !mutuals.some((mutual) => mutual.handle === follow.handle) && // Exclude mutuals
         !blockedUsers.some((blocked) => blocked.handle === follow.handle) // Exclude already blocked users
     );
