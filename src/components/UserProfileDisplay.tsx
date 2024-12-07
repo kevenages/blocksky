@@ -68,7 +68,7 @@ export default function UserProfileDisplay({
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { login, logout, errorMessage } = useAuth();
   const randomText = getRandomShareText();
-  const shareLink = `https://bsky.app/intent/compose?text=${encodeURIComponent(randomText)}`;
+  const shareLink = `https://bsky.app/intent/compose?text=${randomText}`;
 
 
   useEffect(() => {
@@ -137,15 +137,15 @@ export default function UserProfileDisplay({
         ) : isLoggedIn ? (
           isDataInitialized ? (
             <div className="flex flex-col space-y-4 w-full">
-              <p>
+              <div>
                 <span className="font-bold">Please Note</span>:{" "}
                 <HoverCard>
                   <HoverCardTrigger className="cursor-help">Mutuals</HoverCardTrigger>
                   <HoverCardContent>
                     A mutual is someone you follow who also follows you back.
                   </HoverCardContent>
-                </HoverCard>{" "} and accounts you’ve already blocked will be skipped.
-              </p>
+                </HoverCard>, accounts you've already blocked, and users with *.bsky.app or *.bsky.team will be skipped.
+              </div>
               <ConfirmAction
                 title="Block Followers"
                 description={`Are you sure you want to block all followers of "${userProfile?.handle}"? This action cannot be undone.`}
