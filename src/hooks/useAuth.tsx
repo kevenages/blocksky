@@ -3,6 +3,7 @@
 
 import React, { useState, createContext, useContext, ReactNode } from 'react';
 import Cookies from 'js-cookie';
+import { clearBlockedCache } from '../lib/blockApi';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -108,6 +109,7 @@ const login = async (
     Cookies.remove("userHandle");
     Cookies.remove("userDisplayName");
     Cookies.remove("userDID");
+    clearBlockedCache();
   };
 
   return (

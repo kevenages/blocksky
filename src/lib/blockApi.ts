@@ -22,6 +22,11 @@ interface PaginatedResponse<T> {
 let userFollowers: User[] = [];
 let userFollows: User[] = [];
 
+// Blocked users cache
+let blockedHandlesCache: Set<string> | null = null;
+let blockedCacheTimestamp: number = 0;
+const BLOCKED_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 const isWhitelisted = (handle: string): boolean => {
   return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === "bsky.app";
 };
@@ -99,6 +104,44 @@ export const getBlockedUsers = async (): Promise<User[]> => {
     }
     return blockedUsers; // Ensure the function always returns a value
   }
+};
+
+/**
+ * Get blocked handles with caching (5 minute TTL)
+ */
+export const getBlockedHandlesWithCache = async (): Promise<Set<string>> => {
+  const now = Date.now();
+
+  // Return cached if still valid
+  if (blockedHandlesCache && (now - blockedCacheTimestamp) < BLOCKED_CACHE_TTL) {
+    console.log("Using cached blocked list");
+    return blockedHandlesCache;
+  }
+
+  // Fetch fresh and cache
+  console.log("Fetching fresh blocked list");
+  const blockedUsers = await getBlockedUsers();
+  blockedHandlesCache = new Set(blockedUsers.map(u => u.handle));
+  blockedCacheTimestamp = now;
+
+  return blockedHandlesCache;
+};
+
+/**
+ * Add a handle to the blocked cache (called after successful block)
+ */
+export const addToBlockedCache = (handle: string): void => {
+  if (blockedHandlesCache) {
+    blockedHandlesCache.add(handle);
+  }
+};
+
+/**
+ * Clear the blocked cache (call on logout or when needed)
+ */
+export const clearBlockedCache = (): void => {
+  blockedHandlesCache = null;
+  blockedCacheTimestamp = 0;
 };
 
 export const getDidFromHandle = async (handle: string): Promise<string | null> => {
@@ -271,8 +314,7 @@ export const blockUserFollowers = async (
     const followers = await getFollowers(targetHandle);
 
     onStatusChange?.("Checking your blocked list...");
-    const blockedUsers = await getBlockedUsers();
-    const blockedHandles = new Set(blockedUsers.map(b => b.handle));
+    const blockedHandles = await getBlockedHandlesWithCache();
 
     onStatusChange?.("Identifying mutuals...");
     const mutuals = identifyMutuals(followers);
@@ -313,6 +355,7 @@ export const blockUserFollowers = async (
       const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
       if (blocked) {
         blockedCount++;
+        addToBlockedCache(usersToBlock[i].handle);
       }
 
       const progress = ((i + 1) / totalUsers) * 100;
@@ -348,8 +391,7 @@ export const blockUserFollows = async (
     const follows = await getFollows(targetHandle);
 
     onStatusChange?.("Checking your blocked list...");
-    const blockedUsers = await getBlockedUsers();
-    const blockedHandles = new Set(blockedUsers.map(b => b.handle));
+    const blockedHandles = await getBlockedHandlesWithCache();
 
     onStatusChange?.("Identifying mutuals...");
     const mutuals = identifyMutuals(follows);
@@ -390,6 +432,7 @@ export const blockUserFollows = async (
       const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
       if (blocked) {
         blockedCount++;
+        addToBlockedCache(usersToBlock[i].handle);
       }
 
       const progress = ((i + 1) / totalUsers) * 100;
