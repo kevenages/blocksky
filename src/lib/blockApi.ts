@@ -5,6 +5,9 @@ import { getValidAccessToken, ensureValidToken } from './tokenManager';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Batch size for applyWrites - ATProto supports up to 200 operations per request
+const BATCH_SIZE = 200;
+
 export interface User {
   handle: string;
   did: string;
@@ -21,6 +24,9 @@ interface PaginatedResponse<T> {
 
 let userFollowers: User[] = [];
 let userFollows: User[] = [];
+let userDataCacheTimestamp: number = 0;
+let userDataCacheHandle: string | null = null;
+const USER_DATA_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 // Blocked users cache
 let blockedHandlesCache: Set<string> | null = null;
@@ -31,22 +37,48 @@ const isWhitelisted = (handle: string): boolean => {
   return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === "bsky.app";
 };
 
-// Fetch the BlockSky user's followers and followings
-export const fetchUserData = async (currentUserHandle: string) => {
+// Fetch the BlockSky user's followers and followings (with caching)
+export const fetchUserData = async (currentUserHandle: string, forceRefresh = false) => {
   if (!currentUserHandle) {
     console.error("User handle is not provided for fetchUserData");
     throw new Error("User handle is required");
   }
 
+  const now = Date.now();
+
+  // Return cached data if still valid and same user
+  if (
+    !forceRefresh &&
+    userDataCacheHandle === currentUserHandle &&
+    userFollowers.length > 0 &&
+    (now - userDataCacheTimestamp) < USER_DATA_CACHE_TTL
+  ) {
+    console.log("Using cached user followers/following data");
+    return;
+  }
+
   try {
+    console.log("Fetching fresh user followers/following data");
     [userFollowers, userFollows] = await Promise.all([
       getFollowers(currentUserHandle),
       getFollows(currentUserHandle),
     ]);
+    userDataCacheTimestamp = now;
+    userDataCacheHandle = currentUserHandle;
   } catch (error) {
     console.error("Error fetching BlockSky user's data:", error);
     throw error;
   }
+};
+
+/**
+ * Clear the user data cache (call on logout)
+ */
+export const clearUserDataCache = (): void => {
+  userFollowers = [];
+  userFollows = [];
+  userDataCacheTimestamp = 0;
+  userDataCacheHandle = null;
 };
 
 // Identify mutuals for the BlockSky user
@@ -180,8 +212,115 @@ const updateAuthAgentHeader = async (): Promise<boolean> => {
   return false;
 };
 
+interface BatchBlockResult {
+  successCount: number;
+  failedUsers: User[];
+}
+
 /**
- * Block a user with automatic retry on auth failure
+ * Block users in batches using applyWrites for maximum performance.
+ * ATProto supports up to 200 operations per applyWrites call.
+ */
+const blockUsersBatch = async (
+  repo: string,
+  users: User[],
+  onBatchComplete: (completed: number, total: number) => void,
+  maxRetries = 2
+): Promise<BatchBlockResult> => {
+  let successCount = 0;
+  const failedUsers: User[] = [];
+  const totalUsers = users.length;
+
+  // Process in batches of BATCH_SIZE
+  for (let batchStart = 0; batchStart < users.length; batchStart += BATCH_SIZE) {
+    const batch = users.slice(batchStart, batchStart + BATCH_SIZE);
+    const createdAt = new Date().toISOString();
+
+    // Build the writes array for this batch
+    const writes = batch.map(user => ({
+      $type: 'com.atproto.repo.applyWrites#create' as const,
+      collection: 'app.bsky.graph.block',
+      value: {
+        subject: user.did,
+        createdAt,
+        $type: 'app.bsky.graph.block',
+      },
+    }));
+
+    let success = false;
+    for (let attempt = 0; attempt <= maxRetries && !success; attempt++) {
+      try {
+        // Ensure auth header is fresh before the call
+        await updateAuthAgentHeader();
+
+        await authAgent.com.atproto.repo.applyWrites({
+          repo,
+          writes,
+        });
+
+        // Batch succeeded
+        successCount += batch.length;
+        batch.forEach(user => addToBlockedCache(user.handle));
+        success = true;
+        console.log(`Blocked batch of ${batch.length} users (${batchStart + batch.length}/${totalUsers})`);
+
+      } catch (error) {
+        const typedError = error as { status?: number; message?: string };
+
+        // Handle auth errors with retry after token refresh
+        if (typedError.status === 401 && attempt < maxRetries) {
+          console.log(`Auth failed on batch, refreshing token and retrying...`);
+          const newToken = await ensureValidToken();
+          if (!newToken) {
+            console.error("Failed to refresh token");
+            failedUsers.push(...batch);
+            break;
+          }
+          continue;
+        }
+
+        // Handle rate limiting - wait and retry
+        if (typedError.status === 429 && attempt < maxRetries) {
+          console.log("Rate limited, waiting 3 seconds...");
+          await sleep(3000);
+          continue;
+        }
+
+        // Handle upstream failures - wait and retry
+        if ((typedError.message === "UpstreamFailure" || typedError.status === 502) && attempt < maxRetries) {
+          console.log("Upstream failure, retrying in 1 second...");
+          await sleep(1000);
+          continue;
+        }
+
+        // If we get here, all retries failed - fall back to individual blocking for this batch
+        console.error(`Batch failed, falling back to individual blocks for ${batch.length} users:`, error);
+        for (const user of batch) {
+          const blocked = await blockUserWithRetry(repo, user.did, user.handle);
+          if (blocked) {
+            successCount++;
+          } else {
+            failedUsers.push(user);
+          }
+        }
+        success = true; // Mark as "handled" even if some individual blocks failed
+      }
+    }
+
+    // Report progress after each batch
+    onBatchComplete(Math.min(batchStart + batch.length, totalUsers), totalUsers);
+
+    // Small delay between batches to be nice to the API
+    if (batchStart + BATCH_SIZE < users.length) {
+      await sleep(100);
+    }
+  }
+
+  return { successCount, failedUsers };
+};
+
+/**
+ * Block a user with automatic retry on auth failure (used as fallback)
  */
 const blockUserWithRetry = async (
   repo: string,
@@ -331,39 +470,29 @@ export const blockUserFollowers = async (
     );
 
     const alreadyBlockedCount = followers.length - usersToBlock.length - mutuals.length;
-    const totalUsers = usersToBlock.length || 1;
-    let blockedCount = 0;
+
+    if (usersToBlock.length === 0) {
+      onProgress(100, 0);
+      return { success: true, mutuals, alreadyBlockedCount, blockedCount: 0 };
+    }
 
     onStatusChange?.(`Blocking ${usersToBlock.length.toLocaleString()} users...`);
 
-    for (let i = 0; i < usersToBlock.length; i++) {
-      // Refresh token periodically (every 50 users) to prevent mid-operation expiry
-      if (i > 0 && i % 50 === 0) {
-        const freshToken = await ensureValidToken();
-        if (!freshToken) {
-          console.error("Token refresh failed during blocking operation");
-          toast({
-            title: "Session expired",
-            description: `Blocked ${blockedCount} users before session expired. Please log in again to continue.`,
-            variant: "destructive",
-          });
-          return { success: false, mutuals, alreadyBlockedCount, blockedCount };
-        }
+    // Use batch blocking for maximum performance
+    const result = await blockUsersBatch(
+      loggedInUserDid!,
+      usersToBlock,
+      (completed, total) => {
+        const progress = (completed / total) * 100;
+        onProgress(progress, completed);
       }
+    );
 
-      const userDid = usersToBlock[i].did;
-      const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
-      if (blocked) {
-        blockedCount++;
-        addToBlockedCache(usersToBlock[i].handle);
-      }
-
-      const progress = ((i + 1) / totalUsers) * 100;
-      onProgress(progress, i + 1);
-      await sleep(50);
+    if (result.failedUsers.length > 0) {
+      console.warn(`${result.failedUsers.length} users failed to block`);
     }
 
-    return { success: true, mutuals, alreadyBlockedCount, blockedCount };
+    return { success: true, mutuals, alreadyBlockedCount, blockedCount: result.successCount };
   } catch (error) {
     console.error("Error in blockUserFollowers:", error);
     return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
@@ -408,39 +537,29 @@ export const blockUserFollows = async (
     );
 
     const alreadyBlockedCount = follows.length - usersToBlock.length - mutuals.length;
-    const totalUsers = usersToBlock.length || 1;
-    let blockedCount = 0;
+
+    if (usersToBlock.length === 0) {
+      onProgress(100, 0);
+      return { success: true, mutuals, alreadyBlockedCount, blockedCount: 0 };
+    }
 
     onStatusChange?.(`Blocking ${usersToBlock.length.toLocaleString()} users...`);
 
-    for (let i = 0; i < usersToBlock.length; i++) {
-      // Refresh token periodically (every 50 users) to prevent mid-operation expiry
-      if (i > 0 && i % 50 === 0) {
-        const freshToken = await ensureValidToken();
-        if (!freshToken) {
-          console.error("Token refresh failed during blocking operation");
-          toast({
-            title: "Session expired",
-            description: `Blocked ${blockedCount} users before session expired. Please log in again to continue.`,
-            variant: "destructive",
-          });
-          return { success: false, mutuals, alreadyBlockedCount, blockedCount };
-        }
+    // Use batch blocking for maximum performance
+    const result = await blockUsersBatch(
+      loggedInUserDid!,
+      usersToBlock,
+      (completed, total) => {
+        const progress = (completed / total) * 100;
+        onProgress(progress, completed);
       }
+    );
 
-      const userDid = usersToBlock[i].did;
-      const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
-      if (blocked) {
-        blockedCount++;
-        addToBlockedCache(usersToBlock[i].handle);
-      }
-
-      const progress = ((i + 1) / totalUsers) * 100;
-      onProgress(progress, i + 1);
-      await sleep(50);
+    if (result.failedUsers.length > 0) {
+      console.warn(`${result.failedUsers.length} users failed to block`);
     }
 
-    return { success: true, mutuals, alreadyBlockedCount, blockedCount };
+    return { success: true, mutuals, alreadyBlockedCount, blockedCount: result.successCount };
   } catch (error) {
     console.error("Error in blockUserFollows:", error);
     return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
