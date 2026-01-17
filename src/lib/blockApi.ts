@@ -81,11 +81,13 @@ export const clearUserDataCache = (): void => {
   userDataCacheHandle = null;
 };
 
-// Identify mutuals for the BlockSky user
+// Identify mutuals for the BlockSky user - O(n) with Set lookups
 export const identifyMutuals = (list: User[]): User[] => {
+  const followerHandles = new Set(userFollowers.map(f => f.handle));
+  const followingHandles = new Set(userFollows.map(f => f.handle));
+
   return list.filter((item) =>
-    userFollowers.some((follower) => follower.handle === item.handle) &&
-    userFollows.some((following) => following.handle === item.handle)
+    followerHandles.has(item.handle) && followingHandles.has(item.handle)
   );
 };
 
@@ -200,13 +202,26 @@ export const getDidFromHandle = async (handle: string): Promise<string | null> =
   }
 };
 
+// Token header cache to avoid redundant getValidAccessToken calls
+let lastTokenUpdateTime = 0;
+const TOKEN_HEADER_CACHE_MS = 30000; // Cache for 30 seconds
+
 /**
- * Update the authAgent's authorization header with a fresh token
+ * Update the authAgent's authorization header with a fresh token.
+ * Caches the result for 30 seconds to avoid redundant calls during batch operations.
  */
-const updateAuthAgentHeader = async (): Promise<boolean> => {
+const updateAuthAgentHeader = async (forceRefresh = false): Promise<boolean> => {
+  const now = Date.now();
+
+  // Use cached result if still fresh (unless forced)
+  if (!forceRefresh && (now - lastTokenUpdateTime) < TOKEN_HEADER_CACHE_MS) {
+    return true;
+  }
+
   const token = await getValidAccessToken();
   if (token) {
     authAgent.setHeader('Authorization', `Bearer ${token}`);
+    lastTokenUpdateTime = now;
     return true;
   }
   return false;
