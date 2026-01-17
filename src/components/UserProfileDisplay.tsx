@@ -28,6 +28,7 @@ interface UserProfileDisplayProps {
   onBlockFollows: () => Promise<void>;
   isLoggedIn: boolean;
   blockProgress: number;
+  blockingStatus: string | null;
   isCompleted: boolean;
   blockedCount: number;
   isBlockingUser: boolean;
@@ -45,6 +46,7 @@ export default function UserProfileDisplay({
   onBlockFollows,
   isLoggedIn,
   blockProgress,
+  blockingStatus,
   isCompleted,
   blockedCount,
   isBlockingUser,
@@ -159,7 +161,9 @@ export default function UserProfileDisplay({
               {(isBlockingFollowers || isBlockingFollowing) && (
                 <div className="w-full">
                   <Progress value={blockProgress} />
-                  <p className="text-center mt-2">{blockProgress.toFixed(1)}% Complete</p>
+                  <p className="text-center mt-2">
+                    {blockingStatus ? blockingStatus : `${blockProgress.toFixed(1)}% Complete`}
+                  </p>
                 </div>
               )}
               {isCompleted && (

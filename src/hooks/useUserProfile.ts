@@ -39,14 +39,15 @@ export function useUserProfile() {
 
 const startBlockUserFollowers = async (
   handle: string,
-  onProgress: (progress: number, count: number) => void
+  onProgress: (progress: number, count: number) => void,
+  onStatusChange?: (status: string) => void
 ): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
   setBlockProgress(0);
   try {
     const result = await blockUserFollowers(handle, (progress, count) => {
       setBlockProgress(progress);
       onProgress(progress, count);
-    });
+    }, onStatusChange);
     console.log('result.alreadyBlockedCount', result.alreadyBlockedCount);
     setAlreadyBlockedCount(result.alreadyBlockedCount);
     return result;
@@ -58,7 +59,8 @@ const startBlockUserFollowers = async (
 
 const startBlockUserFollows = async (
   handle: string,
-  onProgress: (progress: number, count: number) => void
+  onProgress: (progress: number, count: number) => void,
+  onStatusChange?: (status: string) => void
 ): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
   setBlockProgress(0);
 
@@ -66,7 +68,7 @@ const startBlockUserFollows = async (
     const result = await blockUserFollows(handle, (progress, count) => {
       setBlockProgress(progress);
       onProgress(progress, count);
-    });
+    }, onStatusChange);
     setAlreadyBlockedCount(result.alreadyBlockedCount);
     return result;
   } catch (error) {
