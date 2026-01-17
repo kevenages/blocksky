@@ -25,7 +25,6 @@ export function useUserProfile() {
 
     try {
       await fetchUserData(userHandle);
-      console.log("User data successfully fetched for:", userHandle);
       setIsDataInitialized(true);
     } catch (error) {
       console.error("Error initializing user data:", error);

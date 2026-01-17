@@ -13,6 +13,12 @@ import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { TbLoader3 } from "react-icons/tb";
 import Image from "next/image";
 import ConfirmAction from "./ConfirmAction";
+import { getRandomShareText } from "../lib/shareText";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "../components/ui/hover-card"
 
 interface UserProfile {
   displayName: string;
@@ -63,6 +69,9 @@ export default function UserProfileDisplay({
   const [appPassword, setAppPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { login, logout, errorMessage } = useAuth();
+  const randomText = getRandomShareText();
+  const shareLink = `https://bsky.app/intent/compose?text=${randomText}`;
+
 
   useEffect(() => {
     setHydrated(true);
@@ -130,6 +139,15 @@ export default function UserProfileDisplay({
         ) : isLoggedIn ? (
           isDataInitialized ? (
             <div className="flex flex-col space-y-4 w-full">
+              <div>
+                <span className="font-bold">Please Note</span>:{" "}
+                <HoverCard>
+                  <HoverCardTrigger className="cursor-help">Mutuals</HoverCardTrigger>
+                  <HoverCardContent>
+                    A mutual is someone you follow who also follows you back.
+                  </HoverCardContent>
+                </HoverCard>, accounts you've already blocked, and users with *.bsky.app or *.bsky.team will be skipped.
+              </div>
               <ConfirmAction
                 title="Block Followers"
                 description={`Are you sure you want to block all followers of "${userProfile?.handle}"? This action cannot be undone.`}
@@ -181,6 +199,30 @@ export default function UserProfileDisplay({
                         {alreadyBlockedCount} users were already blocked.
                       </p>
                     )}
+                    <p className="flex justify-center items-center">
+                      <a href='https://ko-fi.com/X8X516M9VR' target='_blank' rel="noopener noreferrer">
+                        <img
+                          className="mt-4"
+                          height='36'
+                          style={{ border: "0px", height: "36px" }}
+                          src='https://storage.ko-fi.com/cdn/kofi5.png?v=6'
+                          alt='Buy Me a Coffee at ko-fi.com'
+                        />
+                      </a>
+                    </p>
+                    <p className="mt-4 flex justify-center items-center font-bold">
+                      Want to spread the word?{" "}
+                    </p>
+                    <p className="mt-2 flex justify-center items-center">
+                      <a
+                        href={shareLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline"
+                      >
+                        Spread the word on Bluesky!
+                      </a>
+                    </p>
                   </AlertDescription>
                 </Alert>
               )}
