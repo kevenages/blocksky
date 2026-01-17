@@ -1,6 +1,7 @@
-import { agent, authAgent, withAuthHeaders } from './api';
+import { agent, authAgent } from './api';
 import { toast } from "../hooks/use-toast";
 import Cookies from 'js-cookie';
+import { getValidAccessToken, ensureValidToken } from './tokenManager';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -49,12 +50,21 @@ export const identifyMutuals = (list: User[]): User[] => {
 export const getBlockedUsers = async (): Promise<User[]> => {
   const blockedUsers: User[] = [];
   try {
+    // Ensure we have a valid token before starting
+    const token = await ensureValidToken();
+    if (!token) {
+      console.error("No valid token available for getBlockedUsers");
+      return blockedUsers;
+    }
+
+    // Update auth header on the agent
+    authAgent.setHeader('Authorization', `Bearer ${token}`);
+
     let cursor: string | undefined;
 
     do {
       const response = await authAgent.app.bsky.graph.getBlocks(
-        { cursor, limit: 50 },
-        { headers: withAuthHeaders() }
+        { cursor, limit: 50 }
       );
 
       if (response.data.blocks) {
@@ -74,8 +84,10 @@ export const getBlockedUsers = async (): Promise<User[]> => {
     ) {
       const typedError = error as { message: string; status: number };
       if (typedError.message === "UpstreamFailure" || typedError.status === 502) {
-        console.error("Upstream failure. Retrying in 5 seconds...");
-        await sleep(500); // Wait 5 seconds before retrying
+        console.error("Upstream failure. Retrying in 500ms...");
+        await sleep(500);
+      } else if (typedError.status === 401) {
+        console.error("Authentication failed in getBlockedUsers. Token may have expired.");
       }
     } else {
       console.error("Error fetching blocked users:", error);
@@ -97,15 +109,90 @@ export const getDidFromHandle = async (handle: string): Promise<string | null> =
     ) {
       const typedError = error as { message: string; status: number };
       if (typedError.message === "UpstreamFailure" || typedError.status === 502) {
-        console.error("Upstream failure. Retrying in 5 seconds...");
-        await sleep(500); // Wait 5 seconds before retrying
+        console.error("Upstream failure. Retrying in 500ms...");
+        await sleep(500);
       }
     } else {
       console.error("Error resolving DID from handle:", error);
-      throw error; // Re-throw other errors to stop the operation
+      throw error;
     }
-    return null; // Return null if DID resolution fails
+    return null;
   }
+};
+
+/**
+ * Update the authAgent's authorization header with a fresh token
+ */
+const updateAuthAgentHeader = async (): Promise<boolean> => {
+  const token = await getValidAccessToken();
+  if (token) {
+    authAgent.setHeader('Authorization', `Bearer ${token}`);
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Block a user with automatic retry on auth failure
+ */
+const blockUserWithRetry = async (
+  repo: string,
+  subjectDid: string,
+  handle: string,
+  maxRetries = 2
+): Promise<boolean> => {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Ensure auth header is fresh before the call
+      await updateAuthAgentHeader();
+
+      const response = await authAgent.app.bsky.graph.block.create(
+        { repo },
+        {
+          subject: subjectDid,
+          createdAt: new Date().toISOString(),
+        }
+      );
+
+      if (response.uri) {
+        console.log(`Blocked: ${handle}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      const typedError = error as { status?: number; message?: string };
+
+      // Handle auth errors with retry after token refresh
+      if (typedError.status === 401 && attempt < maxRetries) {
+        console.log(`Auth failed for ${handle}, refreshing token and retrying...`);
+        const newToken = await ensureValidToken();
+        if (!newToken) {
+          console.error("Failed to refresh token");
+          return false;
+        }
+        // Token has been refreshed, loop will continue and updateAuthAgentHeader will be called
+        continue;
+      }
+
+      // Handle rate limiting
+      if (typedError.status === 429) {
+        console.log("Rate limited, waiting 2 seconds...");
+        await sleep(2000);
+        continue;
+      }
+
+      // Handle upstream failures
+      if (typedError.message === "UpstreamFailure" || typedError.status === 502) {
+        console.log("Upstream failure, retrying in 500ms...");
+        await sleep(500);
+        continue;
+      }
+
+      console.error(`Failed to block ${handle}:`, error);
+      return false;
+    }
+  }
+  return false;
 };
 
 export const getFollowers = async (handle: string): Promise<User[]> => {
@@ -161,95 +248,135 @@ export const getFollows = async (handle: string): Promise<User[]> => {
 export const blockUserFollowers = async (
   targetHandle: string,
   onProgress: (progress: number, count: number) => void
-): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
   try {
-    
-    const followers = await getFollowers(targetHandle); // Get followers
-    const blockedUsers = await getBlockedUsers(); // Get already blocked users
-    const mutuals = identifyMutuals(followers); // Identify mutuals
-    const loggedInUserHandle = Cookies.get("userHandle"); // Fetch the logged-in user's handle
+    // Ensure we have a valid token before starting
+    const initialToken = await ensureValidToken();
+    if (!initialToken) {
+      toast({
+        title: "Authentication expired",
+        description: "Please log in again to continue.",
+        variant: "destructive",
+      });
+      return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
+    }
+
+    const followers = await getFollowers(targetHandle);
+    const blockedUsers = await getBlockedUsers();
+    const mutuals = identifyMutuals(followers);
+    const loggedInUserHandle = Cookies.get("userHandle");
     const loggedInUserDid = Cookies.get("userDID");
 
     const usersToBlock = followers.filter(
       (follower) =>
-        follower.handle !== loggedInUserHandle && // Exclude logged-in user
-        !mutuals.some((mutual) => mutual.handle === follower.handle) && // Exclude mutuals
-        !blockedUsers.some((blocked) => blocked.handle === follower.handle) // Exclude already blocked
+        follower.handle !== loggedInUserHandle &&
+        !mutuals.some((mutual) => mutual.handle === follower.handle) &&
+        !blockedUsers.some((blocked) => blocked.handle === follower.handle)
     );
 
-    const alreadyBlockedCount = followers.length - usersToBlock.length;
-    const totalUsers = usersToBlock.length || 1; // Prevent divide-by-zero
+    const alreadyBlockedCount = followers.length - usersToBlock.length - mutuals.length;
+    const totalUsers = usersToBlock.length || 1;
+    let blockedCount = 0;
 
     for (let i = 0; i < usersToBlock.length; i++) {
-      const userDid = await getDidFromHandle(usersToBlock[i].handle); // Resolve DID
-      if (userDid) {
-
-        const response = await authAgent.app.bsky.graph.block.create(
-          { repo: loggedInUserDid },
-          {
-            subject: userDid, // Block the user by DID
-            createdAt: new Date().toISOString(),
-          },
-        );
-        if (response.uri) {
-          console.log(`Blocked follower: ${usersToBlock[i].handle}`);
+      // Refresh token periodically (every 50 users) to prevent mid-operation expiry
+      if (i > 0 && i % 50 === 0) {
+        const freshToken = await ensureValidToken();
+        if (!freshToken) {
+          console.error("Token refresh failed during blocking operation");
+          toast({
+            title: "Session expired",
+            description: `Blocked ${blockedCount} users before session expired. Please log in again to continue.`,
+            variant: "destructive",
+          });
+          return { success: false, mutuals, alreadyBlockedCount, blockedCount };
         }
       }
+
+      const userDid = await getDidFromHandle(usersToBlock[i].handle);
+      if (userDid) {
+        const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
+        if (blocked) {
+          blockedCount++;
+        }
+      }
+
       const progress = ((i + 1) / totalUsers) * 100;
-      console.log("Blocking progress:", progress);
-      onProgress(progress, i + 1); // Update progress
-      await sleep(50); // Add delay for UI updates
+      onProgress(progress, i + 1);
+      await sleep(50);
     }
 
-    return { success: true, mutuals, alreadyBlockedCount };
+    return { success: true, mutuals, alreadyBlockedCount, blockedCount };
   } catch (error) {
     console.error("Error in blockUserFollowers:", error);
-    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
+    return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
   }
 };
 
 export const blockUserFollows = async (
   targetHandle: string,
   onProgress: (progress: number, count: number) => void
-): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
   try {
-    const follows = await getFollows(targetHandle); // Get the list of users the target is following
-    const blockedUsers = await getBlockedUsers(); // Get already blocked users
-    const mutuals = identifyMutuals(follows); // Identify mutuals
-    const loggedInUserHandle = Cookies.get("userHandle"); // Get the logged-in user's handle
+    // Ensure we have a valid token before starting
+    const initialToken = await ensureValidToken();
+    if (!initialToken) {
+      toast({
+        title: "Authentication expired",
+        description: "Please log in again to continue.",
+        variant: "destructive",
+      });
+      return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
+    }
+
+    const follows = await getFollows(targetHandle);
+    const blockedUsers = await getBlockedUsers();
+    const mutuals = identifyMutuals(follows);
+    const loggedInUserHandle = Cookies.get("userHandle");
+    const loggedInUserDid = Cookies.get("userDID");
 
     const usersToBlock = follows.filter(
       (follow) =>
-        follow.handle !== loggedInUserHandle && // Exclude the logged-in user
-        !mutuals.some((mutual) => mutual.handle === follow.handle) && // Exclude mutuals
-        !blockedUsers.some((blocked) => blocked.handle === follow.handle) // Exclude already blocked users
+        follow.handle !== loggedInUserHandle &&
+        !mutuals.some((mutual) => mutual.handle === follow.handle) &&
+        !blockedUsers.some((blocked) => blocked.handle === follow.handle)
     );
 
-    const alreadyBlockedCount = follows.length - usersToBlock.length;
-    const totalUsers = usersToBlock.length || 1; // Prevent divide-by-zero errors
+    const alreadyBlockedCount = follows.length - usersToBlock.length - mutuals.length;
+    const totalUsers = usersToBlock.length || 1;
+    let blockedCount = 0;
 
     for (let i = 0; i < usersToBlock.length; i++) {
-      const userDid = await getDidFromHandle(usersToBlock[i].handle); // Resolve DID
-      if (userDid) {
-        const response = await authAgent.app.bsky.graph.block.create(
-          { repo: loggedInUserHandle },
-          {
-            subject: userDid, // Use the resolved DID
-            createdAt: new Date().toISOString(),
-          }
-        );
-        if (response.uri) {
-          console.log(`Blocked user: ${usersToBlock[i].handle}`);
+      // Refresh token periodically (every 50 users) to prevent mid-operation expiry
+      if (i > 0 && i % 50 === 0) {
+        const freshToken = await ensureValidToken();
+        if (!freshToken) {
+          console.error("Token refresh failed during blocking operation");
+          toast({
+            title: "Session expired",
+            description: `Blocked ${blockedCount} users before session expired. Please log in again to continue.`,
+            variant: "destructive",
+          });
+          return { success: false, mutuals, alreadyBlockedCount, blockedCount };
         }
       }
+
+      const userDid = await getDidFromHandle(usersToBlock[i].handle);
+      if (userDid) {
+        const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
+        if (blocked) {
+          blockedCount++;
+        }
+      }
+
       const progress = ((i + 1) / totalUsers) * 100;
-      onProgress(progress, i + 1); // Update progress
-      await sleep(50); // Add delay for UI updates
+      onProgress(progress, i + 1);
+      await sleep(50);
     }
 
-    return { success: true, mutuals, alreadyBlockedCount };
+    return { success: true, mutuals, alreadyBlockedCount, blockedCount };
   } catch (error) {
     console.error("Error in blockUserFollows:", error);
-    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
+    return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
   }
 };
