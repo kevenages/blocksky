@@ -3,7 +3,7 @@
 
 import React, { useState, createContext, useContext, ReactNode } from 'react';
 import Cookies from 'js-cookie';
-import { clearBlockedCache } from '../lib/blockApi';
+import { clearBlockedCache, clearUserDataCache } from '../lib/blockApi';
 
 // Secure cookie options for auth tokens
 const secureCookieOptions: Cookies.CookieAttributes = {
@@ -116,6 +116,7 @@ const login = async (
     Cookies.remove("userDisplayName");
     Cookies.remove("userDID");
     clearBlockedCache();
+    clearUserDataCache();
   };
 
   return (
