@@ -13,7 +13,7 @@ interface SuggestionsListProps {
   onSelect: (suggestion: Suggestion) => void;
 }
 
-export default function SuggestionsList({ suggestions = [], onSelect }: SuggestionsListProps) {
+export default React.memo(function SuggestionsList({ suggestions = [], onSelect }: SuggestionsListProps) {
   // Ensure suggestions has a default empty array if not provided
   if (suggestions.length === 0) {
     return null;
@@ -21,9 +21,9 @@ export default function SuggestionsList({ suggestions = [], onSelect }: Suggesti
 
   return (
     <ul className="rounded bg-white shadow-md max-h-40 overflow-y-auto w-full max-w-md">
-      {suggestions.map((suggestion, index) => (
+      {suggestions.map((suggestion) => (
         <li
-          key={index}
+          key={suggestion.handle}
           onClick={() => onSelect(suggestion)}
           className="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-200"
         >
@@ -46,4 +46,4 @@ export default function SuggestionsList({ suggestions = [], onSelect }: Suggesti
       ))}
     </ul>
   );
-}
+});

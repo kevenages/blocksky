@@ -139,7 +139,7 @@ const handleLogin = async () => {
       <SuggestionsList suggestions={suggestions} onSelect={selectSuggestion} />
       {userProfile && (
         <UserProfileDisplay
-          handle={userProfile.handle}
+          userProfile={userProfile}
           isLoggedIn={isLoggedIn}
           onBlockFollowers={handleBlockFollowers}
           onBlockFollows={handleBlockFollows}
