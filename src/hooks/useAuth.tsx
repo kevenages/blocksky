@@ -5,6 +5,12 @@ import React, { useState, createContext, useContext, ReactNode } from 'react';
 import Cookies from 'js-cookie';
 import { clearBlockedCache } from '../lib/blockApi';
 
+// Secure cookie options for auth tokens
+const secureCookieOptions: Cookies.CookieAttributes = {
+  secure: true,
+  sameSite: 'strict',
+};
+
 interface AuthContextType {
   isLoggedIn: boolean;
   login: (handle: string, appPassword: string) => Promise<boolean>;
@@ -64,13 +70,13 @@ const login = async (
 
     if (response.ok) {
       const data = await response.json();
-      Cookies.set("accessToken", data.accessJwt);
-      Cookies.set("refreshToken", data.refreshJwt);
+      Cookies.set("accessToken", data.accessJwt, secureCookieOptions);
+      Cookies.set("refreshToken", data.refreshJwt, secureCookieOptions);
 
       // Save user info in cookies
-      Cookies.set("userHandle", data.handle);
-      Cookies.set("userDisplayName", data.displayName);
-      Cookies.set("userDID", data.did);
+      Cookies.set("userHandle", data.handle, secureCookieOptions);
+      Cookies.set("userDisplayName", data.displayName, secureCookieOptions);
+      Cookies.set("userDID", data.did, secureCookieOptions);
 
       setUser({
         handle: data.handle,
