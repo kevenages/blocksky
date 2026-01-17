@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { getProfile } from "../lib/actorApi";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import HelpSheet from "./HelpSheet";
@@ -29,7 +28,7 @@ interface UserProfile {
 }
 
 interface UserProfileDisplayProps {
-  handle: string;
+  userProfile: UserProfile;
   onBlockFollowers: () => Promise<void>;
   onBlockFollows: () => Promise<void>;
   isLoggedIn: boolean;
@@ -47,7 +46,7 @@ interface UserProfileDisplayProps {
 }
 
 export default function UserProfileDisplay({
-  handle,
+  userProfile,
   onBlockFollowers,
   onBlockFollows,
   isLoggedIn,
@@ -64,27 +63,20 @@ export default function UserProfileDisplay({
   alreadyBlockedCount,
 }: UserProfileDisplayProps) {
   const [hydrated, setHydrated] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [accountHandle, setAccountHandle] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { login, logout, errorMessage } = useAuth();
-  const randomText = getRandomShareText();
-  const shareLink = `https://bsky.app/intent/compose?text=${randomText}`;
 
+  // Memoize share link to avoid recalculating on every render
+  const shareLink = useMemo(() => {
+    const randomText = getRandomShareText();
+    return `https://bsky.app/intent/compose?text=${randomText}`;
+  }, []);
 
   useEffect(() => {
     setHydrated(true);
   }, []);
-
-  useEffect(() => {
-    async function loadProfile() {
-      if (!handle) return;
-      const profile = await getProfile(handle);
-      setUserProfile(profile);
-    }
-    loadProfile();
-  }, [handle]);
 
   const handleLogin = async () => {
     await login(accountHandle, appPassword);
