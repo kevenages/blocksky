@@ -3,6 +3,12 @@ import Cookies from 'js-cookie';
 
 const REFRESH_THRESHOLD_SECONDS = 60; // Refresh if token expires within 60 seconds
 
+// Secure cookie options for auth tokens
+const secureCookieOptions: Cookies.CookieAttributes = {
+  secure: true,
+  sameSite: 'strict',
+};
+
 interface JwtPayload {
   exp?: number;
   iat?: number;
@@ -89,8 +95,8 @@ export const refreshAccessToken = async (refreshToken: string): Promise<RefreshR
     const data: RefreshResponse = await response.json();
 
     // Update cookies with new tokens
-    Cookies.set('accessToken', data.accessJwt);
-    Cookies.set('refreshToken', data.refreshJwt);
+    Cookies.set('accessToken', data.accessJwt, secureCookieOptions);
+    Cookies.set('refreshToken', data.refreshJwt, secureCookieOptions);
 
     console.log('Token refreshed successfully');
     return data;
