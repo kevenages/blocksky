@@ -17,6 +17,7 @@ export default function UserBlocker() {
   const [isBlockingUser, setIsBlockingUser] = useState(false);
   const [isBlockingFollowers, setIsBlockingFollowers] = useState(false);
   const [isBlockingFollowing, setIsBlockingFollowing] = useState(false);
+  const [blockingStatus, setBlockingStatus] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
   const [mutuals, setMutuals] = useState<User[]>([]);
@@ -55,12 +56,18 @@ const handleLogin = async () => {
     setIsCompleted(false);
     setBlockedCount(0);
 
-    const { success, mutuals: fetchedMutuals } = await startBlockUserFollows(username, (progress, count) => {
-      setBlockedCount(count);
-    });
+    const { success, mutuals: fetchedMutuals } = await startBlockUserFollows(
+      username,
+      (progress, count) => {
+        setBlockedCount(count);
+        setBlockingStatus(null);
+      },
+      (status) => setBlockingStatus(status)
+    );
 
     setMutuals(fetchedMutuals);
     setIsBlockingFollowing(false);
+    setBlockingStatus(null);
     setIsCompleted(success);
   };
 
@@ -69,12 +76,18 @@ const handleLogin = async () => {
     setIsCompleted(false);
     setBlockedCount(0);
 
-    const { success, mutuals: fetchedMutuals } = await startBlockUserFollowers(username, (progress, count) => {
-      setBlockedCount(count);
-    });
+    const { success, mutuals: fetchedMutuals } = await startBlockUserFollowers(
+      username,
+      (progress, count) => {
+        setBlockedCount(count);
+        setBlockingStatus(null);
+      },
+      (status) => setBlockingStatus(status)
+    );
 
     setMutuals(fetchedMutuals);
     setIsBlockingFollowers(false);
+    setBlockingStatus(null);
     setIsCompleted(success);
   };
 
@@ -82,6 +95,7 @@ const handleLogin = async () => {
     setIsBlockingUser(false);
     setIsBlockingFollowers(false);
     setIsBlockingFollowing(false);
+    setBlockingStatus(null);
     setIsCompleted(false);
     setBlockedCount(0);
     setMutuals([]);
@@ -130,6 +144,7 @@ const handleLogin = async () => {
           onBlockFollowers={handleBlockFollowers}
           onBlockFollows={handleBlockFollows}
           blockProgress={blockProgress}
+          blockingStatus={blockingStatus}
           isCompleted={isCompleted}
           blockedCount={blockedCount}
           isBlockingUser={isBlockingUser}

@@ -38,39 +38,41 @@ export function useUserProfile() {
 
 const startBlockUserFollowers = async (
   handle: string,
-  onProgress: (progress: number, count: number) => void
-): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
-  setBlockProgress(0); // Reset progress
+  onProgress: (progress: number, count: number) => void,
+  onStatusChange?: (status: string) => void
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
+  setBlockProgress(0);
   try {
     const result = await blockUserFollowers(handle, (progress, count) => {
-      setBlockProgress(progress); // Update progress locally
-      onProgress(progress, count); // Callback for external updates
-    });
+      setBlockProgress(progress);
+      onProgress(progress, count);
+    }, onStatusChange);
     console.log('result.alreadyBlockedCount', result.alreadyBlockedCount);
     setAlreadyBlockedCount(result.alreadyBlockedCount);
     return result;
   } catch (error) {
     console.error("Error blocking followers:", error);
-    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
+    return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
   }
 };
 
 const startBlockUserFollows = async (
   handle: string,
-  onProgress: (progress: number, count: number) => void
-): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number }> => {
-  setBlockProgress(0); // Reset progress
+  onProgress: (progress: number, count: number) => void,
+  onStatusChange?: (status: string) => void
+): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
+  setBlockProgress(0);
 
   try {
     const result = await blockUserFollows(handle, (progress, count) => {
-      setBlockProgress(progress); // Update progress locally
-      onProgress(progress, count); // Callback for external updates
-    });
-    setAlreadyBlockedCount(result.alreadyBlockedCount); // Store alreadyBlockedCount
+      setBlockProgress(progress);
+      onProgress(progress, count);
+    }, onStatusChange);
+    setAlreadyBlockedCount(result.alreadyBlockedCount);
     return result;
   } catch (error) {
     console.error("Error blocking follows:", error);
-    return { success: false, mutuals: [], alreadyBlockedCount: 0 };
+    return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
   }
 };
 
