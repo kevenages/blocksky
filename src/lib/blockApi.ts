@@ -272,9 +272,11 @@ export const blockUserFollowers = async (
 
     onStatusChange?.("Checking your blocked list...");
     const blockedUsers = await getBlockedUsers();
+    const blockedHandles = new Set(blockedUsers.map(b => b.handle));
 
     onStatusChange?.("Identifying mutuals...");
     const mutuals = identifyMutuals(followers);
+    const mutualHandles = new Set(mutuals.map(m => m.handle));
     const loggedInUserHandle = Cookies.get("userHandle");
     const loggedInUserDid = Cookies.get("userDID");
 
@@ -282,8 +284,8 @@ export const blockUserFollowers = async (
       (follower) =>
         follower.handle !== loggedInUserHandle &&
         !isWhitelisted(follower.handle) &&
-        !mutuals.some((mutual) => mutual.handle === follower.handle) &&
-        !blockedUsers.some((blocked) => blocked.handle === follower.handle)
+        !mutualHandles.has(follower.handle) &&
+        !blockedHandles.has(follower.handle)
     );
 
     const alreadyBlockedCount = followers.length - usersToBlock.length - mutuals.length;
@@ -347,9 +349,11 @@ export const blockUserFollows = async (
 
     onStatusChange?.("Checking your blocked list...");
     const blockedUsers = await getBlockedUsers();
+    const blockedHandles = new Set(blockedUsers.map(b => b.handle));
 
     onStatusChange?.("Identifying mutuals...");
     const mutuals = identifyMutuals(follows);
+    const mutualHandles = new Set(mutuals.map(m => m.handle));
     const loggedInUserHandle = Cookies.get("userHandle");
     const loggedInUserDid = Cookies.get("userDID");
 
@@ -357,8 +361,8 @@ export const blockUserFollows = async (
       (follow) =>
         follow.handle !== loggedInUserHandle &&
         !isWhitelisted(follow.handle) &&
-        !mutuals.some((mutual) => mutual.handle === follow.handle) &&
-        !blockedUsers.some((blocked) => blocked.handle === follow.handle)
+        !mutualHandles.has(follow.handle) &&
+        !blockedHandles.has(follow.handle)
     );
 
     const alreadyBlockedCount = follows.length - usersToBlock.length - mutuals.length;
