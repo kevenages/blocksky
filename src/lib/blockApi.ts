@@ -248,7 +248,8 @@ export const getFollows = async (handle: string): Promise<User[]> => {
 
 export const blockUserFollowers = async (
   targetHandle: string,
-  onProgress: (progress: number, count: number) => void
+  onProgress: (progress: number, count: number) => void,
+  onStatusChange?: (status: string) => void
 ): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
   try {
     // Ensure we have a valid token before starting
@@ -262,8 +263,13 @@ export const blockUserFollowers = async (
       return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
     }
 
+    onStatusChange?.(`Fetching @${targetHandle}'s followers...`);
     const followers = await getFollowers(targetHandle);
+
+    onStatusChange?.("Checking your blocked list...");
     const blockedUsers = await getBlockedUsers();
+
+    onStatusChange?.("Identifying mutuals...");
     const mutuals = identifyMutuals(followers);
     const loggedInUserHandle = Cookies.get("userHandle");
     const loggedInUserDid = Cookies.get("userDID");
@@ -278,6 +284,8 @@ export const blockUserFollowers = async (
     const alreadyBlockedCount = followers.length - usersToBlock.length - mutuals.length;
     const totalUsers = usersToBlock.length || 1;
     let blockedCount = 0;
+
+    onStatusChange?.(`Blocking ${usersToBlock.length.toLocaleString()} users...`);
 
     for (let i = 0; i < usersToBlock.length; i++) {
       // Refresh token periodically (every 50 users) to prevent mid-operation expiry
@@ -314,7 +322,8 @@ export const blockUserFollowers = async (
 
 export const blockUserFollows = async (
   targetHandle: string,
-  onProgress: (progress: number, count: number) => void
+  onProgress: (progress: number, count: number) => void,
+  onStatusChange?: (status: string) => void
 ): Promise<{ success: boolean; mutuals: User[]; alreadyBlockedCount: number; blockedCount: number }> => {
   try {
     // Ensure we have a valid token before starting
@@ -328,8 +337,13 @@ export const blockUserFollows = async (
       return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
     }
 
+    onStatusChange?.(`Fetching accounts @${targetHandle} follows...`);
     const follows = await getFollows(targetHandle);
+
+    onStatusChange?.("Checking your blocked list...");
     const blockedUsers = await getBlockedUsers();
+
+    onStatusChange?.("Identifying mutuals...");
     const mutuals = identifyMutuals(follows);
     const loggedInUserHandle = Cookies.get("userHandle");
     const loggedInUserDid = Cookies.get("userDID");
@@ -344,6 +358,8 @@ export const blockUserFollows = async (
     const alreadyBlockedCount = follows.length - usersToBlock.length - mutuals.length;
     const totalUsers = usersToBlock.length || 1;
     let blockedCount = 0;
+
+    onStatusChange?.(`Blocking ${usersToBlock.length.toLocaleString()} users...`);
 
     for (let i = 0; i < usersToBlock.length; i++) {
       // Refresh token periodically (every 50 users) to prevent mid-operation expiry
