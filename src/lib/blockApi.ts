@@ -7,6 +7,7 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 export interface User {
   handle: string;
+  did: string;
 }
 
 interface PaginatedResponse<T> {
@@ -293,12 +294,10 @@ export const blockUserFollowers = async (
         }
       }
 
-      const userDid = await getDidFromHandle(usersToBlock[i].handle);
-      if (userDid) {
-        const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
-        if (blocked) {
-          blockedCount++;
-        }
+      const userDid = usersToBlock[i].did;
+      const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
+      if (blocked) {
+        blockedCount++;
       }
 
       const progress = ((i + 1) / totalUsers) * 100;
@@ -361,12 +360,10 @@ export const blockUserFollows = async (
         }
       }
 
-      const userDid = await getDidFromHandle(usersToBlock[i].handle);
-      if (userDid) {
-        const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
-        if (blocked) {
-          blockedCount++;
-        }
+      const userDid = usersToBlock[i].did;
+      const blocked = await blockUserWithRetry(loggedInUserDid!, userDid, usersToBlock[i].handle);
+      if (blocked) {
+        blockedCount++;
       }
 
       const progress = ((i + 1) / totalUsers) * 100;
