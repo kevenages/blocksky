@@ -23,6 +23,7 @@ interface UserProfile {
   displayName: string;
   handle: string;
   avatar?: string;
+  description?: string;
   followersCount?: number;
   followsCount?: number;
 }
@@ -66,7 +67,8 @@ export default function UserProfileDisplay({
   const [accountHandle, setAccountHandle] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const { login, logout, errorMessage } = useAuth();
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const { login, loginWithOAuth, logout, user } = useAuth();
 
   // Memoize share link to avoid recalculating on every render
   const shareLink = useMemo(() => {
@@ -80,6 +82,18 @@ export default function UserProfileDisplay({
 
   const handleLogin = async () => {
     await login(accountHandle, appPassword);
+  };
+
+  const handleOAuthLogin = async () => {
+    if (!accountHandle.trim()) {
+      return;
+    }
+    setIsOAuthLoading(true);
+    try {
+      await loginWithOAuth(accountHandle);
+    } finally {
+      setIsOAuthLoading(false);
+    }
   };
 
   if (!hydrated) return null;
@@ -114,6 +128,11 @@ export default function UserProfileDisplay({
               @{userProfile.handle}
             </a>
           )}
+          {userProfile?.description && (
+            <p className="text-gray-600 text-sm mt-2 px-4 line-clamp-3">
+              {userProfile.description}
+            </p>
+          )}
         </div>
         <div className="w-full flex justify-center">
           <Badge variant="outline" className="mr-2 mt-4">
@@ -131,6 +150,18 @@ export default function UserProfileDisplay({
         ) : isLoggedIn ? (
           isDataInitialized ? (
             <div className="flex flex-col space-y-4 w-full">
+              {user?.handle && (
+                <div className="flex justify-center items-center gap-2 text-sm text-gray-600 pb-2 border-b border-gray-200">
+                  <span>Signed in as <span className="font-semibold">@{user.handle}</span></span>
+                  <span className="text-gray-400">|</span>
+                  <button
+                    onClick={logout}
+                    className="text-blue-500 hover:text-blue-700 hover:underline"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
               <div>
                 <span className="font-bold">Please Note</span>:{" "}
                 <HoverCard>
@@ -233,25 +264,44 @@ export default function UserProfileDisplay({
           <div className="flex flex-col items-center space-y-2 w-full">
             <div className="flex items-center space-x-2 mb-2">
               <span>
-                To start blocking, sign in with your Bluesky App Password. Note: This is different
-                from your main Bluesky password.
+                To start blocking, sign in with Bluesky.
               </span>
               <HelpSheet />
             </div>
+
+            {/* Handle input for OAuth */}
             <input
               type="text"
               value={accountHandle}
               onChange={(e) => setAccountHandle(e.target.value)}
-              placeholder="Enter Bluesky handle for your account"
+              placeholder="Enter your Bluesky handle (e.g., alice.bsky.social)"
               className="border rounded w-full px-4 py-2"
               autoComplete="username"
             />
+
+            {/* OAuth Sign In Button */}
+            <Button
+              onClick={handleOAuthLogin}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={isOAuthLoading || !accountHandle.trim()}
+            >
+              {isOAuthLoading ? "Redirecting..." : "Sign in with Bluesky"}
+            </Button>
+
+            {/* Divider */}
+            <div className="flex items-center w-full my-2">
+              <div className="flex-1 border-t border-gray-300"></div>
+              <span className="px-4 text-gray-500 text-sm">or use App Password</span>
+              <div className="flex-1 border-t border-gray-300"></div>
+            </div>
+
+            {/* App Password input */}
             <div className="relative w-full">
               <input
                 type={isPasswordVisible ? "text" : "password"}
                 value={appPassword}
                 onChange={(e) => setAppPassword(e.target.value)}
-                placeholder="Bluesky App Password (e.g., xxxx-xxxx-xxxx-xxxx)"
+                placeholder="App Password (e.g., xxxx-xxxx-xxxx-xxxx)"
                 className="border rounded w-full px-4 py-2 pr-10"
                 autoComplete="off"
               />
@@ -267,10 +317,14 @@ export default function UserProfileDisplay({
                 )}
               </span>
             </div>
-            <Button onClick={handleLogin} className="w-full">
-              Login
+            <Button
+              onClick={handleLogin}
+              className="w-full"
+              variant="outline"
+              disabled={!accountHandle.trim() || !appPassword.trim()}
+            >
+              Login with App Password
             </Button>
-            {errorMessage && <p className="text-red-500">{errorMessage}</p>}
           </div>
         )}
         
