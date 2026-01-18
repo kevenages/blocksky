@@ -19,20 +19,37 @@ export default function HelpSheet() {
       </SheetTrigger>
       <SheetContent side="right" className="min-w-[40vw] overflow-auto">
         <SheetHeader>
-          <SheetTitle>How to set up an App Password</SheetTitle>
+          <SheetTitle>How to Sign In</SheetTitle>
           <SheetDescription />
         </SheetHeader>
         <div className="mt-4">
-          <Alert className="my-4">
-            <AlertTitle>What is a Bluesky App Password?</AlertTitle>
+          {/* OAuth Section */}
+          <Alert className="my-4 border-blue-200 bg-blue-50">
+            <AlertTitle>Option 1: Sign in with Bluesky (Recommended)</AlertTitle>
             <AlertDescription>
-              App Passwords allow you to log in to applications like Blocksky without giving full access to your account or password.
+              The easiest way to sign in. Just enter your handle and authorize BlockSky through Bluesky.
+            </AlertDescription>
+          </Alert>
+          <ol className="list-decimal list-inside mt-2 mb-6">
+            <li className="mb-2">Enter your Bluesky handle (e.g., yourname.bsky.social)</li>
+            <li className="mb-2">Click &quot;Sign in with Bluesky&quot;</li>
+            <li className="mb-2">You&apos;ll be redirected to Bluesky to authorize BlockSky</li>
+            <li className="mb-2">After authorizing, you&apos;ll be redirected back and signed in</li>
+          </ol>
+
+          <div className="border-t border-gray-200 my-6" />
+
+          {/* App Password Section */}
+          <Alert className="my-4">
+            <AlertTitle>Option 2: Use an App Password</AlertTitle>
+            <AlertDescription>
+              App Passwords allow you to log in without using OAuth. They don&apos;t give full access to your account.
             </AlertDescription>
           </Alert>
           <ol className="list-decimal list-inside mt-2">
-            <li> 
-              <Link 
-                href="https://bsky.app/settings/app-passwords" 
+            <li>
+              <Link
+                href="https://bsky.app/settings/app-passwords"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500"
@@ -44,17 +61,17 @@ export default function HelpSheet() {
                 width={500}
                 height={500}
                 className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                alt=""
+                alt="Bluesky settings showing App Passwords option"
               />
             </li>
             <li>
-              Enter a name for your new password. You may create one specifically for use with Blocksky, if you wish.
+              Enter a name for your new password. You may create one specifically for use with BlockSky, if you wish.
               <Image
                 src="/images/app-password-2.png"
                 width={500}
                 height={500}
                 className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                alt=""
+                alt="Dialog to create a new app password with a name field"
               />
             </li>
             <li>
@@ -64,18 +81,11 @@ export default function HelpSheet() {
                 width={500}
                 height={500}
                 className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                alt=""
+                alt="Newly created app password displayed for copying"
               />
             </li>
-            <li>
-              Use this app password to log in instead of your main account password.
-              <Image
-                src="/images/app-password-4.png"
-                width={500}
-                height={500}
-                className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                alt=""
-              />
+            <li className="mb-2">
+              Back in BlockSky, enter your Bluesky handle and paste the app password into the &quot;App Password&quot; field, then click &quot;Login with App Password&quot;.
             </li>
             <li>
               When you are done, you can either choose to keep the app password or delete it in your Bluesky settings.
@@ -84,7 +94,7 @@ export default function HelpSheet() {
                 width={500}
                 height={500}
                 className="rounded-lg drop-shadow-md border border-solid border-gray-300 my-4"
-                alt=""
+                alt="Bluesky settings showing option to delete app password"
               />
             </li>
           </ol>
