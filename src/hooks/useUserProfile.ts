@@ -121,6 +121,11 @@ export function useUserProfile() {
         }
       }
 
+      // If stream ended without a complete or error event, treat as error
+      if (!result.success && !result.errorMessage) {
+        result.errorMessage = 'Connection closed unexpectedly';
+      }
+
       return result;
     } catch (error) {
       console.error('Error in block stream:', error);
