@@ -20,6 +20,7 @@ interface BlockResult {
   mutuals: User[];
   alreadyBlockedCount: number;
   blockedCount: number;
+  errorMessage?: string;
 }
 
 export function useUserProfile() {
@@ -61,7 +62,7 @@ export function useUserProfile() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Block API error:', errorData.error);
-        return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
+        return { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0, errorMessage: errorData.error || 'Request failed' };
       }
 
       const reader = response.body?.getReader();
@@ -110,7 +111,7 @@ export function useUserProfile() {
 
                 case 'error':
                   console.error('Block stream error:', data.message);
-                  result = { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0 };
+                  result = { success: false, mutuals: [], alreadyBlockedCount: 0, blockedCount: 0, errorMessage: data.message };
                   break;
               }
             } catch (e) {

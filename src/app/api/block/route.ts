@@ -269,9 +269,18 @@ export async function POST(request: NextRequest) {
 
       await writer.close();
     } catch (error) {
-      console.error('Block error:', error);
-      await sendEvent({ type: 'error', message: 'An error occurred during blocking' });
-      await writer.close();
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Block error:', errorMessage, error);
+      try {
+        await sendEvent({ type: 'error', message: errorMessage });
+      } catch {
+        // Writer may already be closed
+      }
+      try {
+        await writer.close();
+      } catch {
+        // Ignore close errors
+      }
     }
   })();
 

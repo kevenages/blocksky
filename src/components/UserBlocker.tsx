@@ -8,6 +8,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { User } from "../lib/blockApi";
 import { IoCloseCircle } from "react-icons/io5";
+import { toast } from "../hooks/use-toast";
 import {
   Tooltip,
   TooltipContent,
@@ -75,7 +76,7 @@ const handleLogin = async () => {
     setIsCompleted(false);
     setBlockedCount(0);
 
-    const { success, mutuals: fetchedMutuals } = await startBlockUserFollows(
+    const { success, mutuals: fetchedMutuals, errorMessage } = await startBlockUserFollows(
       username,
       (progress, count) => {
         setBlockedCount(count);
@@ -88,6 +89,14 @@ const handleLogin = async () => {
     setIsBlockingFollowing(false);
     setBlockingStatus(null);
     setIsCompleted(success);
+
+    if (!success && errorMessage) {
+      toast({
+        variant: "destructive",
+        title: "Blocking failed",
+        description: errorMessage,
+      });
+    }
   };
 
   const handleBlockFollowers = async () => {
@@ -95,7 +104,7 @@ const handleLogin = async () => {
     setIsCompleted(false);
     setBlockedCount(0);
 
-    const { success, mutuals: fetchedMutuals } = await startBlockUserFollowers(
+    const { success, mutuals: fetchedMutuals, errorMessage } = await startBlockUserFollowers(
       username,
       (progress, count) => {
         setBlockedCount(count);
@@ -108,6 +117,14 @@ const handleLogin = async () => {
     setIsBlockingFollowers(false);
     setBlockingStatus(null);
     setIsCompleted(success);
+
+    if (!success && errorMessage) {
+      toast({
+        variant: "destructive",
+        title: "Blocking failed",
+        description: errorMessage,
+      });
+    }
   };
 
   const resetState = () => {
