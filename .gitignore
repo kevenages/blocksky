@@ -31,6 +31,9 @@ dist/
 .claude/
 CLAUDE.md
 
+# Local scripts
+/scripts/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

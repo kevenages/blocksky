@@ -7,6 +7,13 @@ import UserProfileDisplay from "./UserProfileDisplay";
 import { useAuth } from "../hooks/useAuth";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { User } from "../lib/blockApi";
+import { IoCloseCircle } from "react-icons/io5";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 export default function UserBlocker() {
   const [username, setUsername] = useState("");
@@ -28,6 +35,7 @@ export default function UserBlocker() {
     loadUserProfile,
     fetchSuggestions,
     clearSuggestions,
+    clearUserProfile,
     setSuggestions,
     startBlockUserFollowers,
     startBlockUserFollows,
@@ -36,12 +44,23 @@ export default function UserBlocker() {
     alreadyBlockedCount,
   } = useUserProfile();
 
-  const { login, isLoggedIn } = useAuth();
+  const { login, isLoggedIn, authMethod } = useAuth();
   const { initializeUserData } = useUserProfile();
 
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  // Restore searched profile after OAuth redirect
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('oauth_searched_profile');
+    if (savedUsername && isLoggedIn && authMethod === 'oauth' && !userProfile) {
+      localStorage.removeItem('oauth_searched_profile');
+      setUsername(savedUsername);
+      setLoading(true);
+      loadUserProfile(savedUsername).finally(() => setLoading(false));
+    }
+  }, [isLoggedIn, authMethod, userProfile, loadUserProfile]);
 
 const handleLogin = async () => {
   const success = await login(accountHandle, appPassword);
@@ -116,27 +135,57 @@ const handleLogin = async () => {
   const selectSuggestion = async (suggestion: { handle: string }) => {
     resetState();
     setUsername(suggestion.handle);
+    // Save for OAuth redirect restoration
+    localStorage.setItem('oauth_searched_profile', suggestion.handle);
     clearSuggestions();
     setLoading(true);
     await loadUserProfile(suggestion.handle);
     setLoading(false);
   };
 
+  const clearSearch = () => {
+    setUsername("");
+    clearSuggestions();
+    clearUserProfile();
+    localStorage.removeItem('oauth_searched_profile');
+    resetState();
+  };
+
   if (!hydrated) return null;
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <InfoCard />
-      <input
-        type="text"
-        value={username}
-        onChange={handleInputChange}
-        placeholder="Find by Bluesky name or handle"
-        className="border border-gray-300 rounded-md w-full max-w-md px-4 py-2 mt-4 mb-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        autoComplete="off"
-        disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
-      />
-      <SuggestionsList suggestions={suggestions} onSelect={selectSuggestion} />
+    <TooltipProvider>
+      <div className="flex flex-col items-center space-y-4">
+        <InfoCard />
+        <div className="relative w-full max-w-md mt-4 mb-2">
+          <input
+            type="text"
+            value={username}
+            onChange={handleInputChange}
+            placeholder="Find by Bluesky name or handle"
+            className="border border-gray-300 rounded-md w-full px-4 py-2 pr-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoComplete="off"
+            disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
+          />
+          {username && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  aria-label="Clear search"
+                  disabled={isBlockingUser || isBlockingFollowers || isBlockingFollowing}
+                >
+                  <IoCloseCircle className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Clear search</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        <SuggestionsList suggestions={suggestions} onSelect={selectSuggestion} />
       {userProfile && (
         <UserProfileDisplay
           userProfile={userProfile}
@@ -156,6 +205,7 @@ const handleLogin = async () => {
           alreadyBlockedCount={alreadyBlockedCount}
         />
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

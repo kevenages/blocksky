@@ -6,6 +6,7 @@ interface Profile {
   handle: string;
   displayName: string;
   avatar?: string; // Optional field for the profile image
+  description?: string; // Bio/description
   followersCount?: number; // Optional field for follower count
   followsCount?: number; // Optional field for following count
 }
