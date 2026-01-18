@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getOAuthClient } from '@/lib/oauthClient';
+import { getOAuthClient, sessionStore } from '@/lib/oauthClient';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -32,6 +32,9 @@ export async function GET(request: NextRequest) {
 
     const profile = await profileResponse.json();
 
+    // Get the saved session data from the store (the OAuth client saves it during callback)
+    const savedSession = await sessionStore.get(session.did);
+
     // Set cookies
     const cookieStore = await cookies();
 
@@ -62,6 +65,15 @@ export async function GET(request: NextRequest) {
       httpOnly: false,
       maxAge: 60 * 60 * 24 * 30,
     });
+
+    // Store the serialized OAuth session in a cookie for persistence
+    // This allows session restoration after server restarts
+    if (savedSession) {
+      cookieStore.set('oauth_session', JSON.stringify(savedSession), {
+        ...COOKIE_OPTIONS,
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
 
     // Redirect to home page
     return NextResponse.redirect(new URL('/', getBaseUrl()));

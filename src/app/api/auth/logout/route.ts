@@ -26,6 +26,7 @@ export async function POST() {
     cookieStore.delete('user_did');
     cookieStore.delete('user_display_name');
     cookieStore.delete('auth_method');
+    cookieStore.delete('oauth_session');
 
     return NextResponse.json({ success: true });
   } catch (error) {

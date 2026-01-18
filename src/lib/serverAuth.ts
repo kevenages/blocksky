@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { AtpAgent } from '@atproto/api';
 import { OAuthSession } from '@atproto/oauth-client-node';
-import { getOAuthClient } from './oauthClient';
+import { getOAuthClient, sessionStore } from './oauthClient';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -129,6 +129,19 @@ export async function getAuthenticatedAgent(): Promise<AtpAgent | null> {
   if (authMethod === 'oauth' && userDid) {
     try {
       const client = getOAuthClient();
+
+      // First, try to restore session from cookie if not in memory
+      const oauthSessionCookie = cookieStore.get('oauth_session')?.value;
+      if (oauthSessionCookie) {
+        try {
+          const savedSession = JSON.parse(oauthSessionCookie);
+          // Re-populate the in-memory store from the cookie
+          await sessionStore.set(userDid, savedSession);
+        } catch (e) {
+          console.error('Failed to parse oauth_session cookie:', e);
+        }
+      }
+
       const oauthSession = await client.restore(userDid, 'auto');
 
       // Create a SessionManager adapter from the OAuth session
