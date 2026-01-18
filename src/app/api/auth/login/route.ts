@@ -67,6 +67,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Set auth method to password
+    cookieStore.set('auth_method', 'password', {
+      ...COOKIE_OPTIONS,
+      httpOnly: false,
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
+    // Clear any OAuth session cookie from previous OAuth login
+    cookieStore.delete('oauth_session');
+
     // Return user info (but NOT tokens)
     return NextResponse.json({
       success: true,

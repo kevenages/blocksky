@@ -159,11 +159,23 @@ export async function getAuthenticatedAgent(): Promise<AtpAgent | null> {
   }
 
   // Handle password-based auth
-  const token = await getServerAccessToken();
-  if (!token) return null;
+  const accessToken = cookieStore.get('access_token')?.value;
+  const refreshToken = cookieStore.get('refresh_token')?.value;
+  const userHandle = cookieStore.get('user_handle')?.value;
+
+  if (!accessToken || !userDid || !userHandle) return null;
 
   const agent = new AtpAgent({ service: 'https://bsky.social' });
-  agent.setHeader('Authorization', `Bearer ${token}`);
+
+  // Use resumeSession for proper authentication
+  await agent.resumeSession({
+    accessJwt: accessToken,
+    refreshJwt: refreshToken || '',
+    handle: userHandle,
+    did: userDid,
+    active: true,
+  });
+
   return agent;
 }
 
