@@ -281,6 +281,13 @@ function HomePage() {
             </CardHeader>
           )}
           <CardContent className="space-y-4">
+            {isLoading && (
+              <div className="rounded-lg border border-dashed p-4 text-center">
+                <div className="mb-3 h-4 w-3/4 mx-auto animate-pulse rounded bg-blue-500/20" />
+                <div className="h-10 w-40 mx-auto animate-pulse rounded bg-blue-500/30" />
+              </div>
+            )}
+
             {!isAuthenticated && !isLoading && (
               <div className="rounded-lg border border-dashed p-4 text-center">
                 <p className="mb-3 text-sm text-muted-foreground">

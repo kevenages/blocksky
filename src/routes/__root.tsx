@@ -6,6 +6,8 @@ import { CookiePolicySheet } from '@/components/cookie-policy-sheet'
 import { PrivacyPolicySheet } from '@/components/privacy-policy-sheet'
 import { ThemeProvider } from '@/components/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { RiBlueskyFill } from 'react-icons/ri'
+import { Heart } from 'lucide-react'
 
 import appCss from '../styles.css?url'
 
@@ -78,7 +80,27 @@ function RootComponent() {
             </main>
             <footer className="border-t py-6">
               <div className="container mx-auto px-4">
-                <div className="flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                <div className="flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex gap-4">
+                    <a
+                      href="https://bsky.app/profile/blocksky.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 hover:text-blue-500 transition-colors"
+                    >
+                      <RiBlueskyFill className="h-4 w-4" />
+                      @blocksky.app
+                    </a>
+                    <a
+                      href="https://ko-fi.com/blockskyapp"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 hover:text-pink-500 transition-colors"
+                    >
+                      <Heart className="h-4 w-4" />
+                      Support us
+                    </a>
+                  </div>
                   <div className="flex gap-4">
                     <PrivacyPolicySheet />
                     <CookiePolicySheet />
