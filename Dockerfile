@@ -12,7 +12,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application (skip prebuild for OAuth, we generate at runtime)
 RUN npm run build
 
 # Production stage
@@ -31,7 +31,11 @@ COPY --from=builder /app/public ./public
 # Copy node_modules for externalized packages (firebase-admin, grpc, etc.)
 COPY --from=builder /app/node_modules ./node_modules
 
-# Set ownership
+# Copy startup script
+COPY --from=builder /app/scripts/start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Set ownership (need to do this before switching user so public can be written to)
 RUN chown -R blocksky:nodejs /app
 
 USER blocksky
@@ -42,4 +46,4 @@ ENV NODE_ENV=production
 
 EXPOSE 8080
 
-CMD ["node", ".output/server/index.mjs"]
+CMD ["./start.sh"]
