@@ -31,6 +31,13 @@ const config = defineConfig({
           'google-auth-library',
         ],
       },
+      // Server handlers for dynamic routes
+      handlers: [
+        {
+          route: '/.well-known/oauth-client.json',
+          handler: './server/oauth-metadata.ts',
+        },
+      ],
     }),
     tailwindcss(),
     viteTsConfigPaths({

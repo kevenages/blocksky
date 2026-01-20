@@ -31,11 +31,7 @@ COPY --from=builder /app/public ./public
 # Copy node_modules for externalized packages (firebase-admin, grpc, etc.)
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy startup script
-COPY --from=builder /app/scripts/start.sh ./start.sh
-RUN chmod +x ./start.sh
-
-# Set ownership (need to do this before switching user so public can be written to)
+# Set ownership
 RUN chown -R blocksky:nodejs /app
 
 USER blocksky
@@ -46,4 +42,4 @@ ENV NODE_ENV=production
 
 EXPOSE 8080
 
-CMD ["./start.sh"]
+CMD ["node", ".output/server/index.mjs"]
