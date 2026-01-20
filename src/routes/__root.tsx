@@ -59,11 +59,6 @@ function RootComponent() {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
-        {/* Prevent FOUC - hide body until styles load */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          body { opacity: 0; }
-          body.ready { opacity: 1; transition: opacity 0.1s ease-in; }
-        `}} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
@@ -110,7 +105,6 @@ function RootComponent() {
           </TooltipProvider>
         </ThemeProvider>
         <Scripts />
-        <script dangerouslySetInnerHTML={{ __html: `document.body.classList.add('ready');` }} />
       </body>
     </html>
   )
