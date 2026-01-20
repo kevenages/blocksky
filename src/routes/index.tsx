@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Shield, Users, Zap, Lock, X, Loader2, Heart, Clock } from 'lucide-react'
+import { Shield, Users, Zap, Lock, X, Loader2, Heart, Clock, Wand2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
@@ -599,7 +599,7 @@ function HomePage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <Shield className="h-8 w-8 text-blue-500 mb-2" />
+              <Wand2 className="h-8 w-8 text-blue-500 mb-2" />
               <CardTitle className="text-lg">Automatic Blocking</CardTitle>
             </CardHeader>
             <CardContent>
