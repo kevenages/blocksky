@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+
+# Build output (will be created during build)
+.output
+dist
+
+# Development files
+.env.local
+.env*.local
+service-account.json
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__
+coverage
+
+# Documentation
+*.md
+LICENSE
+
+# Misc
+.eslintrc*
+.prettierrc*
+vitest.config.*

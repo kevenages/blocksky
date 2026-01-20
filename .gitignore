@@ -1,50 +1,43 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+node_modules
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Build outputs
+dist
+dist-ssr
+.output
+.nitro
+.vinxi
+.tanstack
 
-# testing
-/coverage
+# Environment files
+.env
+.env.local
+*.local
 
-# next.js
-/.next/
-/out/
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea
 
-# production
-/build
-.cache/
-dist/
-.next/cache
-
-# misc
+# OS
 .DS_Store
-*.pem
+Thumbs.db
 
-# Claude Code
-.claude/
-CLAUDE.md
+# Firebase
+.firebase
+*.log
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
 
-# Local scripts
-/scripts/
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# Misc
+count.txt
+todos.json
 *.tsbuildinfo
-next-env.d.ts
+
+# Cloudflare
+.wrangler
+
+# Internal testing scripts
+wipe-blocks.mjs
+service-account.json

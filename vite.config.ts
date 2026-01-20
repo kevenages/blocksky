@@ -1,0 +1,44 @@
+import { defineConfig } from 'vite'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import viteReact from '@vitejs/plugin-react'
+import viteTsConfigPaths from 'vite-tsconfig-paths'
+import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath, URL } from 'url'
+import { nitro } from 'nitro/vite'
+
+const config = defineConfig({
+  server: {
+    allowedHosts: ['.ngrok-free.app', '.ngrok.io', '.trycloudflare.com'],
+  },
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  plugins: [
+    // devtools(), // Disabled to reduce requests through ngrok
+    nitro({
+      // Externalize firebase-admin and dependencies to avoid ESM/grpc issues
+      rollupConfig: {
+        external: [
+          'firebase-admin',
+          'firebase-admin/app',
+          'firebase-admin/firestore',
+          '@google-cloud/firestore',
+          'google-gax',
+          '@grpc/grpc-js',
+          '@grpc/proto-loader',
+          'google-auth-library',
+        ],
+      },
+    }),
+    tailwindcss(),
+    viteTsConfigPaths({
+      projects: ['./tsconfig.json'],
+    }),
+    tanstackStart(),
+    viteReact(),
+  ],
+})
+
+export default config
