@@ -63,7 +63,7 @@ function HomePage() {
 
       if (remaining <= 0) {
         // Check if there are still accounts to block
-        const accountsRemaining = blockingState.total - blockingState.blocked - blockingState.skipped
+        const accountsRemaining = blockingState.total - blockingState.blocked
         setBlockingState(prev => ({
           ...prev,
           rateLimitedUntil: null,
@@ -471,9 +471,9 @@ function HomePage() {
                       <p className="text-sm text-muted-foreground mt-1">
                         until you can continue blocking
                       </p>
-                      {blockingState.total - blockingState.blocked - blockingState.skipped > 0 && (
+                      {blockingState.total - blockingState.blocked > 0 && (
                         <p className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-2">
-                          {blockingState.total - blockingState.blocked - blockingState.skipped} accounts remaining
+                          {blockingState.total - blockingState.blocked} accounts remaining
                         </p>
                       )}
                     </div>
