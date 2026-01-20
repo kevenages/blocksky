@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
         }))
 
         // Small delay between blocks
-        await sleep(25)
+        await sleep(50)
       }
 
       // Send completion
