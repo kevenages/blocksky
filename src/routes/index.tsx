@@ -95,27 +95,9 @@ function HomePage() {
     await performBlocking('following')
   }
 
-  const BATCH_SIZE = 200 // Same as old app - larger batches = fewer API calls
-  const MAX_BLOCKS_PER_HOUR = 1666 // Bluesky rate limit: 5000 points/hr ÷ 3 points/block
-
-  const formatEstimatedTime = (count: number): string => {
-    if (!count || count === 0) return ''
-    const hours = count / MAX_BLOCKS_PER_HOUR
-    if (hours < 1) {
-      const minutes = Math.ceil(hours * 60)
-      return `~${minutes} min`
-    } else if (hours < 24) {
-      const wholeHours = Math.floor(hours)
-      const minutes = Math.round((hours - wholeHours) * 60)
-      if (minutes === 0) return `~${wholeHours} hr`
-      return `~${wholeHours} hr ${minutes} min`
-    } else {
-      const days = Math.floor(hours / 24)
-      const remainingHours = Math.round(hours % 24)
-      if (remainingHours === 0) return `~${days} day${days > 1 ? 's' : ''}`
-      return `~${days} day${days > 1 ? 's' : ''} ${remainingHours} hr`
-    }
-  }
+  // Smaller batches since we're now blocking individually on the server
+  // Each batch = N individual block.create calls with 50ms delay
+  const BATCH_SIZE = 100
 
   const isWhitelisted = (handle: string): boolean => {
     return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === 'bsky.app'
@@ -229,12 +211,9 @@ function HomePage() {
           current: `Blocked ${blocked} of ${toBlock.length} users...`,
         }))
 
-        // Delay between batches to avoid rate limits
-        // Bluesky: ~5000 points/5min, applyWrites ~3 points/write
-        // 200 writes = 600 points per batch
-        // Using 5 sec delay - can tune based on actual rate limit behavior
+        // Small delay between batches (server handles per-block delays)
         if (i + BATCH_SIZE < toBlock.length) {
-          await new Promise((resolve) => setTimeout(resolve, 5000))
+          await new Promise((resolve) => setTimeout(resolve, 100))
         }
       }
 
@@ -390,36 +369,22 @@ function HomePage() {
                 {!blockingState.isBlocking && blockingState.completedTypes.length === 0 && (
                   <>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          className="w-full"
-                          variant="destructive"
-                          onClick={handleBlockFollowers}
-                        >
-                          <Users className="mr-2 h-4 w-4" />
-                          Block Followers
-                        </Button>
-                        {selectedProfile.followersCount && selectedProfile.followersCount > 0 && (
-                          <p className="text-xs text-center text-muted-foreground">
-                            {formatEstimatedTime(selectedProfile.followersCount)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          className="w-full"
-                          variant="outline"
-                          onClick={handleBlockFollowing}
-                        >
-                          <Users className="mr-2 h-4 w-4" />
-                          Block Following
-                        </Button>
-                        {selectedProfile.followsCount && selectedProfile.followsCount > 0 && (
-                          <p className="text-xs text-center text-muted-foreground">
-                            {formatEstimatedTime(selectedProfile.followsCount)}
-                          </p>
-                        )}
-                      </div>
+                      <Button
+                        className="w-full"
+                        variant="destructive"
+                        onClick={handleBlockFollowers}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Block Followers
+                      </Button>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={handleBlockFollowing}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Block Following
+                      </Button>
                     </div>
 
                     <p className="text-xs text-center text-muted-foreground">

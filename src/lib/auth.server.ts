@@ -425,6 +425,7 @@ export const blockUser = createServerFn({ method: 'POST' })
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+// Block users one at a time (like old app) - better rate limits than applyWrites batch
 export const blockUsersBatch = createServerFn({ method: 'POST' })
   .inputValidator((data: { targetDids: string[] }) => data)
   .handler(async ({ data }) => {
@@ -450,46 +451,30 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
     const session = await client.restore(userDid)
     const agent = new Agent(session)
 
-    const createdAt = new Date().toISOString()
+    let blocked = 0
 
-    const writes = data.targetDids.map((did) => ({
-      $type: 'com.atproto.repo.applyWrites#create' as const,
-      collection: 'app.bsky.graph.block',
-      value: {
-        subject: did,
-        createdAt,
-        $type: 'app.bsky.graph.block',
-      },
-    }))
+    // Block users individually (like old app) instead of batch applyWrites
+    for (const targetDid of data.targetDids) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await agent.app.bsky.graph.block.create(
+            { repo: userDid },
+            {
+              subject: targetDid,
+              createdAt: new Date().toISOString(),
+            }
+          )
+          blocked++
+          break // Success, move to next user
+        } catch (error: unknown) {
+          const err = error as {
+            status?: number
+            message?: string
+            headers?: Record<string, string>
+          }
 
-    // Retry logic for rate limits and upstream failures
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        await agent.com.atproto.repo.applyWrites({
-          repo: userDid,
-          writes,
-        })
-
-        const duration = timer()
-        logger.info('Batch block completed', {
-          action: 'block_batch',
-          userId: userDid,
-          count: data.targetDids.length,
-          duration,
-        })
-        return { success: true, blocked: data.targetDids.length }
-      } catch (error: unknown) {
-        const err = error as {
-          status?: number
-          message?: string
-          error?: string
-          headers?: Record<string, string>
-        }
-
-        // Rate limit - check if we should wait or give up
-        if (err.status === 429 || err.message?.includes('Rate Limit')) {
-          if (attempt === 2) {
-            // Try to get the reset time from headers
+          // Rate limit - return partial progress with error
+          if (err.status === 429 || err.message?.includes('Rate Limit')) {
             const resetTimestamp = err.headers?.['ratelimit-reset']
             let resetMessage = 'Rate limit exceeded.'
 
@@ -500,66 +485,57 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
               const diffMins = Math.ceil(diffMs / 60000)
 
               if (diffMins > 0) {
-                resetMessage = `Rate limit exceeded. Try again in ${diffMins} minute${diffMins === 1 ? '' : 's'} (resets at ${resetDate.toLocaleTimeString()}).`
+                resetMessage = `Rate limit exceeded. Try again in ${diffMins} minute${diffMins === 1 ? '' : 's'}.`
               } else {
                 resetMessage = 'Rate limit exceeded. It should reset any moment now - try again.'
               }
-            } else {
-              resetMessage = 'Rate limit exceeded. Please wait ~1 hour for your Bluesky rate limit to reset.'
             }
 
-            logger.warn('Rate limit hit during batch block', {
+            logger.warn('Rate limit hit during blocking', {
               action: 'block_batch',
               userId: userDid,
-              count: data.targetDids.length,
+              blocked,
+              total: data.targetDids.length,
             })
+
+            // Return partial success
             return {
-              success: false,
-              blocked: 0,
+              success: blocked > 0,
+              blocked,
               error: resetMessage
             }
           }
-          await sleep(10000)
-          continue
-        }
 
-        // Upstream failure - wait 1 second and retry
-        if (err.status === 502 || err.message === 'UpstreamFailure') {
-          logger.warn('Upstream failure during batch block, retrying', {
-            action: 'block_batch',
-            userId: userDid,
-            attempt: attempt + 1,
-          })
-          await sleep(1000)
-          continue
-        }
+          // Upstream failure - wait and retry
+          if (err.status === 502 || err.message === 'UpstreamFailure') {
+            await sleep(500)
+            continue
+          }
 
-        // Socket error - usually means server closed connection (often due to rate limiting)
-        if (err.message?.includes('UND_ERR_SOCKET') || err.message?.includes('socket')) {
-          logger.warn('Socket error during batch block, retrying', {
-            action: 'block_batch',
-            userId: userDid,
-            attempt: attempt + 1,
-          })
-          await sleep(5000)
-          continue
+          // Other error - skip this user after retries
+          if (attempt === 2) {
+            logger.warn('Failed to block user after retries', {
+              action: 'block',
+              targetDid,
+            })
+          } else {
+            await sleep(100)
+          }
         }
-
-        // Other error - don't retry
-        logger.error('Batch block failed', error, {
-          action: 'block_batch',
-          userId: userDid,
-          count: data.targetDids.length,
-        })
-        return { success: false, blocked: 0, error: 'Block operation failed' }
       }
+
+      // Small delay between blocks (50ms like old app)
+      await sleep(50)
     }
 
-    // All retries exhausted
-    logger.error('Batch block max retries exceeded', undefined, {
+    const duration = timer()
+    logger.info('Block batch completed', {
       action: 'block_batch',
       userId: userDid,
-      count: data.targetDids.length,
+      blocked,
+      total: data.targetDids.length,
+      duration,
     })
-    return { success: false, blocked: 0, error: 'Max retries exceeded' }
+
+    return { success: true, blocked }
   })
