@@ -455,7 +455,7 @@ function HomePage() {
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground text-center">
-                      Bluesky limits blocking to ~1,666 accounts per hour to prevent abuse.
+                      Bluesky rate limits blocking to prevent abuse. Try again in an hour.
                     </p>
                   </div>
                 )}
