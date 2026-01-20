@@ -591,11 +591,11 @@ function HomePage() {
           <Card>
             <CardHeader className="pb-2">
               <Shield className="h-8 w-8 text-blue-500 mb-2" />
-              <CardTitle className="text-lg">Batch Blocking</CardTitle>
+              <CardTitle className="text-lg">Automatic Blocking</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Block hundreds of accounts efficiently with our optimized batch processing.
+                Block thousands of accounts automatically while you wait.
               </p>
             </CardContent>
           </Card>
