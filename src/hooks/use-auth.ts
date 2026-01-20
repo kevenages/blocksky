@@ -25,10 +25,9 @@ function parseCookies(): Record<string, string> {
 }
 
 export function useAuth() {
-  // Start with not authenticated - this shows the login button during SSR
-  // and will update on the client if user is actually logged in
+  // Start with loading state to prevent flash of login button
   const [state, setState] = useState<AuthState>({
-    isLoading: false,
+    isLoading: true,
     isAuthenticated: false,
     user: null,
   })
