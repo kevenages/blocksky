@@ -267,14 +267,14 @@ function HomePage() {
         toast.success(`Blocked ${blocked} users!`)
       } else {
         if (failed > 0) {
-          // Rate limit hit - set countdown for ~1 hour from now
-          const rateLimitedUntil = Date.now() + 60 * 60 * 1000
+          // Rate limit hit - set countdown for ~5 minutes from now (Bluesky resets every 5 min)
+          const rateLimitedUntil = Date.now() + 5 * 60 * 1000
           setBlockingState((prev) => ({
             ...prev,
             isBlocking: false,
             current: 'Rate limit exceeded',
             rateLimitedUntil,
-            rateLimitRemaining: 60 * 60 * 1000,
+            rateLimitRemaining: 5 * 60 * 1000,
           }))
         } else {
           setBlockingState((prev) => ({
@@ -455,7 +455,7 @@ function HomePage() {
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground text-center">
-                      Bluesky rate limits blocking to prevent abuse. Try again in an hour.
+                      Bluesky rate limits reset every ~5 minutes.
                     </p>
                   </div>
                 )}
