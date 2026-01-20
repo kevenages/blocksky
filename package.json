@@ -6,7 +6,7 @@
     "dev": "vite dev --port 3000",
     "dev:full": "concurrently \"npm run emulators\" \"npm run dev\"",
     "emulators": "firebase emulators:start",
-    "prebuild": "node scripts/generate-oauth-metadata.js",
+    "prebuild": "node scripts/generate-oauth-metadata.cjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

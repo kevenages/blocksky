@@ -1,0 +1,19 @@
+{
+  "client_id": "https://test.example.com/.well-known/oauth-client.json",
+  "client_name": "BlockSky",
+  "client_uri": "https://test.example.com",
+  "redirect_uris": [
+    "https://test.example.com/auth/callback"
+  ],
+  "grant_types": [
+    "authorization_code",
+    "refresh_token"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "scope": "atproto transition:generic",
+  "token_endpoint_auth_method": "none",
+  "application_type": "web",
+  "dpop_bound_access_tokens": true
+}
