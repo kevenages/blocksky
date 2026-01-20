@@ -64,11 +64,6 @@ function RootComponent() {
           body { opacity: 0; }
           body.ready { opacity: 1; transition: opacity 0.1s ease-in; }
         `}} />
-        <script dangerouslySetInnerHTML={{ __html: `
-          document.addEventListener('DOMContentLoaded', function() {
-            document.body.classList.add('ready');
-          });
-        `}} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
@@ -115,6 +110,7 @@ function RootComponent() {
           </TooltipProvider>
         </ThemeProvider>
         <Scripts />
+        <script dangerouslySetInnerHTML={{ __html: `document.body.classList.add('ready');` }} />
       </body>
     </html>
   )
