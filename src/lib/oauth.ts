@@ -2,7 +2,8 @@ import { NodeOAuthClient } from '@atproto/oauth-client-node'
 import { firestoreStateStore, firestoreSessionStore } from './firestore'
 
 const getBaseUrl = () => {
-  return process.env.VITE_APP_URL || 'http://localhost:3000'
+  // APP_URL for server-side (Cloud Run), VITE_APP_URL for client-side (Vite)
+  return process.env.APP_URL || process.env.VITE_APP_URL || 'http://localhost:3000'
 }
 
 declare global {
