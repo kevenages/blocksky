@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createEventStream, getCookie } from 'h3'
 import { Agent } from '@atproto/api'
+import { XRPCError } from '@atproto/xrpc'
 
 const DID_REGEX = /^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$/
 
@@ -62,18 +63,26 @@ export default defineEventHandler(async (event) => {
             success = true
             break
           } catch (error: unknown) {
+            // Check if it's an XRPCError with headers
+            const xrpcError = error instanceof XRPCError ? error : null
             const err = error as {
               status?: number
               message?: string
             }
 
-            // Rate limit - send error and stop
+            // Rate limit - send error with reset time from headers
             if (err.status === 429 || err.message?.includes('Rate Limit')) {
+              // Extract reset timestamp from headers (Unix timestamp in seconds)
+              const resetHeader = xrpcError?.headers?.['ratelimit-reset']
+              const resetAt = resetHeader ? parseInt(resetHeader, 10) * 1000 : Date.now() + 5 * 60 * 1000
+
               await eventStream.push(JSON.stringify({
                 type: 'rate_limit',
                 blocked,
                 failed,
                 total,
+                resetAt,
+                remaining: total - blocked - failed,
               }))
               await eventStream.close()
               return
@@ -105,7 +114,7 @@ export default defineEventHandler(async (event) => {
         }))
 
         // Small delay between blocks
-        await sleep(10)
+        await sleep(25)
       }
 
       // Send completion

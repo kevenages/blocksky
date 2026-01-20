@@ -62,11 +62,15 @@ function HomePage() {
       setBlockingState(prev => ({ ...prev, rateLimitRemaining: remaining }))
 
       if (remaining <= 0) {
+        // Check if there are still accounts to block
+        const accountsRemaining = blockingState.total - blockingState.blocked - blockingState.skipped
         setBlockingState(prev => ({
           ...prev,
           rateLimitedUntil: null,
           rateLimitRemaining: null,
-          current: 'Ready to continue'
+          current: accountsRemaining > 0
+            ? `Ready to continue - ${accountsRemaining} accounts remaining`
+            : 'Ready to continue'
         }))
       }
     }
@@ -74,7 +78,7 @@ function HomePage() {
     updateRemaining()
     const interval = setInterval(updateRemaining, 1000)
     return () => clearInterval(interval)
-  }, [blockingState.rateLimitedUntil])
+  }, [blockingState.rateLimitedUntil, blockingState.total, blockingState.blocked, blockingState.skipped])
 
   // Cache for mutuals - only fetch once per session
   const mutualDidsCache = useRef<Set<string> | null>(null)
@@ -255,21 +259,26 @@ function HomePage() {
                   current: `Blocked ${data.blocked} of ${data.total} users...`,
                 }))
               } else if (data.type === 'rate_limit') {
-                // Rate limit hit - set countdown for ~5 minutes
-                const rateLimitedUntil = Date.now() + 5 * 60 * 1000
+                // Use reset time from server headers, or fallback to 5 minutes
+                const rateLimitedUntil = data.resetAt || Date.now() + 5 * 60 * 1000
+                const remaining = data.remaining || 0
                 setBlockingState((prev) => ({
                   ...prev,
                   isBlocking: false,
                   blocked: data.blocked,
-                  current: 'Rate limit exceeded',
+                  total: data.total,
+                  current: remaining > 0
+                    ? `Rate limited - ${remaining} accounts remaining`
+                    : 'Rate limit exceeded',
                   rateLimitedUntil,
-                  rateLimitRemaining: 5 * 60 * 1000,
-                  completedTypes: data.blocked > 0 && !prev.completedTypes.includes(type)
+                  rateLimitRemaining: rateLimitedUntil - Date.now(),
+                  // Don't mark as completed if there are remaining accounts
+                  completedTypes: remaining === 0 && data.blocked > 0 && !prev.completedTypes.includes(type)
                     ? [...prev.completedTypes, type]
                     : prev.completedTypes,
                 }))
                 if (data.blocked > 0) {
-                  toast.success(`Blocked ${data.blocked} users before rate limit!`)
+                  toast.success(`Blocked ${data.blocked} users before rate limit! ${remaining > 0 ? `${remaining} remaining.` : ''}`)
                 }
                 return
               } else if (data.type === 'complete') {
@@ -462,9 +471,14 @@ function HomePage() {
                       <p className="text-sm text-muted-foreground mt-1">
                         until you can continue blocking
                       </p>
+                      {blockingState.total - blockingState.blocked - blockingState.skipped > 0 && (
+                        <p className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-2">
+                          {blockingState.total - blockingState.blocked - blockingState.skipped} accounts remaining
+                        </p>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground text-center">
-                      Bluesky rate limits reset every ~5 minutes.
+                      Blocked {blockingState.blocked} of {blockingState.total} so far. Rate limits are set by Bluesky.
                     </p>
                   </div>
                 )}
