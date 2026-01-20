@@ -34,6 +34,11 @@ export const Route = createRootRoute({
       },
       {
         rel: 'icon',
+        type: 'image/x-icon',
+        href: '/favicon.ico',
+      },
+      {
+        rel: 'icon',
         type: 'image/png',
         href: '/favicon.png',
       },
@@ -52,6 +57,16 @@ function RootComponent() {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Prevent FOUC - hide body until styles load */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          body { opacity: 0; }
+          body.ready { opacity: 1; transition: opacity 0.1s ease-in; }
+        `}} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('ready');
+          });
+        `}} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
