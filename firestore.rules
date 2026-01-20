@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read/write their own data
+    match /users/{did} {
+      allow read, write: if request.auth != null
+                         && request.auth.token.did == did;
+
+      // Sessions - users can read their own sessions
+      match /sessions/{sessionId} {
+        allow read: if request.auth != null
+                    && request.auth.token.did == did;
+        // Only server can write sessions
+        allow write: if false;
+      }
+
+      // Operations - users can read their own operations
+      match /operations/{operationId} {
+        allow read: if request.auth != null
+                    && request.auth.token.did == did;
+        // Only server can write operations
+        allow write: if false;
+      }
+    }
+  }
+}
