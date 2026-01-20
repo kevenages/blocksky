@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Shield, Users, Zap, Lock, X, Loader2, Heart } from 'lucide-react'
+import { Shield, Users, Zap, Lock, X, Loader2, Heart, Clock } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
@@ -33,6 +33,8 @@ interface BlockingState {
   skipped: number
   current: string
   completedTypes: Array<'followers' | 'following'>
+  rateLimitedUntil: number | null
+  rateLimitRemaining: number | null
 }
 
 function HomePage() {
@@ -47,7 +49,32 @@ function HomePage() {
     skipped: 0,
     current: '',
     completedTypes: [],
+    rateLimitedUntil: null,
+    rateLimitRemaining: null,
   })
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (!blockingState.rateLimitedUntil) return
+
+    const updateRemaining = () => {
+      const remaining = Math.max(0, blockingState.rateLimitedUntil! - Date.now())
+      setBlockingState(prev => ({ ...prev, rateLimitRemaining: remaining }))
+
+      if (remaining <= 0) {
+        setBlockingState(prev => ({
+          ...prev,
+          rateLimitedUntil: null,
+          rateLimitRemaining: null,
+          current: 'Ready to continue'
+        }))
+      }
+    }
+
+    updateRemaining()
+    const interval = setInterval(updateRemaining, 1000)
+    return () => clearInterval(interval)
+  }, [blockingState.rateLimitedUntil])
 
   // Cache for mutuals - only fetch once per session
   const mutualDidsCache = useRef<Set<string> | null>(null)
@@ -82,6 +109,8 @@ function HomePage() {
       skipped: 0,
       current: '',
       completedTypes: [],
+      rateLimitedUntil: null,
+      rateLimitRemaining: null,
     })
   }
 
@@ -98,6 +127,14 @@ function HomePage() {
   // Smaller batches since we're now blocking individually on the server
   // Each batch = N individual block.create calls with 50ms delay
   const BATCH_SIZE = 100
+
+  // Format milliseconds to MM:SS
+  const formatCountdown = (ms: number): string => {
+    const totalSeconds = Math.ceil(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
 
   const isWhitelisted = (handle: string): boolean => {
     return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === 'bsky.app'
@@ -229,13 +266,22 @@ function HomePage() {
         }))
         toast.success(`Blocked ${blocked} users!`)
       } else {
-        setBlockingState((prev) => ({
-          ...prev,
-          isBlocking: false,
-          current: failed > 0 ? 'Failed - rate limit exceeded' : 'No users to block',
-        }))
         if (failed > 0) {
-          toast.error('Rate limit exceeded. Please wait ~1 hour and try again.')
+          // Rate limit hit - set countdown for ~1 hour from now
+          const rateLimitedUntil = Date.now() + 60 * 60 * 1000
+          setBlockingState((prev) => ({
+            ...prev,
+            isBlocking: false,
+            current: 'Rate limit exceeded',
+            rateLimitedUntil,
+            rateLimitRemaining: 60 * 60 * 1000,
+          }))
+        } else {
+          setBlockingState((prev) => ({
+            ...prev,
+            isBlocking: false,
+            current: 'No users to block',
+          }))
         }
       }
     } catch {
@@ -366,7 +412,7 @@ function HomePage() {
                 </div>
 
                 {/* Block Options */}
-                {!blockingState.isBlocking && blockingState.completedTypes.length === 0 && (
+                {!blockingState.isBlocking && blockingState.completedTypes.length === 0 && !blockingState.rateLimitedUntil && (
                   <>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Button
@@ -393,8 +439,29 @@ function HomePage() {
                   </>
                 )}
 
+                {/* Rate Limit Warning */}
+                {blockingState.rateLimitedUntil && blockingState.rateLimitRemaining && (
+                  <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                      <Clock className="h-5 w-5" />
+                      <span className="font-medium">Rate limit reached</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-mono font-bold text-amber-600 dark:text-amber-400">
+                        {formatCountdown(blockingState.rateLimitRemaining)}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        until you can continue blocking
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Bluesky limits blocking to ~1,666 accounts per hour to prevent abuse.
+                    </p>
+                  </div>
+                )}
+
                 {/* Blocking Progress */}
-                {(blockingState.isBlocking || blockingState.completedTypes.length > 0) && (
+                {(blockingState.isBlocking || blockingState.completedTypes.length > 0) && !blockingState.rateLimitedUntil && (
                   <div className="space-y-3">
                     <div className="text-sm font-medium">
                       {blockingState.isBlocking ? blockingState.current : 'Complete!'}
