@@ -65,7 +65,7 @@ export function LoginDialog({ trigger }: LoginDialogProps) {
             <Input
               placeholder="yourname.bsky.social"
               value={handle}
-              onChange={(e) => setHandle(e.target.value)}
+              onChange={(e) => setHandle(e.target.value.toLowerCase())}
               disabled={isLoading}
               autoFocus
             />
