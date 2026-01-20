@@ -209,9 +209,12 @@ function HomePage() {
           current: `Blocked ${blocked} of ${toBlock.length} users...`,
         }))
 
-        // Small delay between batches
+        // Delay between batches to avoid rate limits
+        // Bluesky: ~5000 points/5min, applyWrites ~3 points/write
+        // 200 writes = 600 points per batch
+        // Using 5 sec delay - can tune based on actual rate limit behavior
         if (i + BATCH_SIZE < toBlock.length) {
-          await new Promise((resolve) => setTimeout(resolve, 100))
+          await new Promise((resolve) => setTimeout(resolve, 5000))
         }
       }
 
