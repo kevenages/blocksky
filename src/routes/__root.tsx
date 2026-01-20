@@ -31,6 +31,11 @@ export const Route = createRootRoute({
     ],
     links: [
       {
+        rel: 'preload',
+        href: appCss,
+        as: 'style',
+      },
+      {
         rel: 'stylesheet',
         href: appCss,
       },
@@ -58,6 +63,22 @@ function RootComponent() {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Inline theme detection script - must be first to prevent flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var stored = localStorage.getItem('theme');
+              var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              var theme = stored === 'dark' || (stored === 'system' || !stored) && systemDark ? 'dark' : 'light';
+              if (theme === 'dark') document.documentElement.classList.add('dark');
+            } catch(e) {}
+          })();
+        `}} />
+        {/* Inline critical styles to prevent flash */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          html { background-color: #fff; }
+          html.dark { background-color: #242424; }
+        `}} />
         <HeadContent />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
