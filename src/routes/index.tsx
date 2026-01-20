@@ -251,8 +251,8 @@ function HomePage() {
       <div className="flex flex-col items-center justify-center space-y-8">
         {/* Hero Section */}
         <div className="flex flex-col items-center space-y-4 text-center">
-          <div className="flex items-center space-x-3">
-            <Shield className="h-12 w-12 text-blue-500" />
+          <div className="flex flex-col items-center space-y-3">
+            <img src="/logo.png" alt="BlockSky" className="h-24 w-auto" />
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
               Block<span className="text-blue-500">Sky</span>
             </h1>
