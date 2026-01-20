@@ -19,7 +19,7 @@ export function Header() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {isLoading ? (
-            <div className="h-8 w-24 animate-pulse rounded bg-muted" />
+            <div className="h-8 w-24 animate-pulse rounded bg-blue-500/30" />
           ) : isAuthenticated ? (
             <UserMenu />
           ) : (
