@@ -76,9 +76,9 @@ function RootComponent() {
         `}} />
         {/* Inline critical styles to prevent flash */}
         <style dangerouslySetInnerHTML={{ __html: `
-          html { background-color: #fff; color: #0a0a0a; }
-          html.dark { background-color: #242424; color: #fafafa; }
-          body { background-color: inherit; color: inherit; opacity: 0; }
+          html { background-color: #fff; }
+          html.dark { background-color: #242424; }
+          body { opacity: 0; }
           body.css-loaded { opacity: 1; transition: opacity 0.1s ease-in; }
         `}} />
         <HeadContent />
