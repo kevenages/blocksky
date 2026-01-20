@@ -62,26 +62,39 @@ function HomePage() {
       setBlockingState(prev => ({ ...prev, rateLimitRemaining: remaining }))
 
       if (remaining <= 0) {
-        // Check if there are still accounts to block
-        const accountsRemaining = blockingState.total - blockingState.blocked
-        setBlockingState(prev => ({
-          ...prev,
-          rateLimitedUntil: null,
-          rateLimitRemaining: null,
-          current: accountsRemaining > 0
-            ? `Ready to continue - ${accountsRemaining} accounts remaining`
-            : 'Ready to continue'
-        }))
+        // Auto-resume if there are pending DIDs
+        if (pendingDidsRef.current.length > 0) {
+          setBlockingState(prev => ({
+            ...prev,
+            rateLimitedUntil: null,
+            rateLimitRemaining: null,
+            isBlocking: true,
+            current: `Resuming - ${pendingDidsRef.current.length} accounts remaining...`
+          }))
+          // Trigger auto-resume
+          resumeBlocking()
+        } else {
+          setBlockingState(prev => ({
+            ...prev,
+            rateLimitedUntil: null,
+            rateLimitRemaining: null,
+            current: 'Ready to continue'
+          }))
+        }
       }
     }
 
     updateRemaining()
     const interval = setInterval(updateRemaining, 1000)
     return () => clearInterval(interval)
-  }, [blockingState.rateLimitedUntil, blockingState.total, blockingState.blocked, blockingState.skipped])
+  }, [blockingState.rateLimitedUntil])
 
   // Cache for mutuals - only fetch once per session
   const mutualDidsCache = useRef<Set<string> | null>(null)
+
+  // Store pending DIDs for auto-resume after rate limit
+  const pendingDidsRef = useRef<string[]>([])
+  const blockingTypeRef = useRef<'followers' | 'following' | null>(null)
 
   const handleProfileSelect = async (profile: SelectedProfile) => {
     if (!user?.handle) return
@@ -138,6 +151,115 @@ function HomePage() {
 
   const isWhitelisted = (handle: string): boolean => {
     return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === 'bsky.app'
+  }
+
+  // Stream blocks to the server and handle responses
+  const streamBlocks = async (targetDids: string[], type: 'followers' | 'following', baseBlocked: number = 0) => {
+    const response = await fetch('/api/block-stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetDids }),
+    })
+
+    if (!response.ok || !response.body) {
+      throw new Error('Failed to start blocking')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6))
+
+            if (data.type === 'progress') {
+              setBlockingState((prev) => ({
+                ...prev,
+                blocked: baseBlocked + data.blocked,
+                current: `Blocked ${baseBlocked + data.blocked} of ${prev.total} users...`,
+              }))
+            } else if (data.type === 'rate_limit') {
+              const rateLimitedUntil = data.resetAt || Date.now() + 5 * 60 * 1000
+              const processedCount = data.blocked + (data.failed || 0)
+              const remainingDids = targetDids.slice(processedCount)
+
+              // Store remaining DIDs for auto-resume
+              pendingDidsRef.current = remainingDids
+              blockingTypeRef.current = type
+
+              setBlockingState((prev) => ({
+                ...prev,
+                isBlocking: false,
+                blocked: baseBlocked + data.blocked,
+                current: remainingDids.length > 0
+                  ? `Rate limited - ${remainingDids.length} accounts remaining`
+                  : 'Rate limit exceeded',
+                rateLimitedUntil,
+                rateLimitRemaining: rateLimitedUntil - Date.now(),
+                completedTypes: remainingDids.length === 0 && (baseBlocked + data.blocked) > 0 && !prev.completedTypes.includes(type)
+                  ? [...prev.completedTypes, type]
+                  : prev.completedTypes,
+              }))
+              if (data.blocked > 0) {
+                toast.success(`Blocked ${data.blocked} users before rate limit! ${remainingDids.length > 0 ? `${remainingDids.length} remaining - will auto-resume.` : ''}`)
+              }
+              return
+            } else if (data.type === 'complete') {
+              // Clear pending DIDs on complete
+              pendingDidsRef.current = []
+              blockingTypeRef.current = null
+
+              setBlockingState((prev) => ({
+                ...prev,
+                isBlocking: false,
+                blocked: baseBlocked + data.blocked,
+                current: 'Complete!',
+                completedTypes: prev.completedTypes.includes(type)
+                  ? prev.completedTypes
+                  : [...prev.completedTypes, type],
+              }))
+              toast.success(`Blocked ${baseBlocked + data.blocked} users!`)
+              return
+            } else if (data.type === 'error') {
+              throw new Error(data.message || 'Unknown error')
+            }
+          } catch {
+            // Ignore parse errors for incomplete messages
+          }
+        }
+      }
+    }
+  }
+
+  // Resume blocking after rate limit
+  const resumeBlocking = async () => {
+    const remainingDids = pendingDidsRef.current
+    const type = blockingTypeRef.current
+
+    if (remainingDids.length === 0 || !type) return
+
+    try {
+      const currentBlocked = blockingState.blocked
+      await streamBlocks(remainingDids, type, currentBlocked)
+    } catch {
+      toast.error('An error occurred while resuming')
+      setBlockingState((prev) => ({
+        ...prev,
+        isBlocking: false,
+        current: 'Error occurred',
+      }))
+    }
   }
 
   const performBlocking = async (type: 'followers' | 'following') => {
@@ -223,85 +345,10 @@ function HomePage() {
       // Stream blocking progress in real-time
       const targetDids = toBlock.map((u) => u.did)
 
-      const response = await fetch('/api/block-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetDids }),
-      })
+      // Store type for potential auto-resume
+      blockingTypeRef.current = type
 
-      if (!response.ok || !response.body) {
-        throw new Error('Failed to start blocking')
-      }
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-
-        // Process complete messages (SSE format: "event: message\ndata: {...}\n\n")
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || '' // Keep incomplete line in buffer
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6))
-
-              if (data.type === 'progress') {
-                setBlockingState((prev) => ({
-                  ...prev,
-                  blocked: data.blocked,
-                  current: `Blocked ${data.blocked} of ${data.total} users...`,
-                }))
-              } else if (data.type === 'rate_limit') {
-                // Use reset time from server headers, or fallback to 5 minutes
-                const rateLimitedUntil = data.resetAt || Date.now() + 5 * 60 * 1000
-                const remaining = data.remaining || 0
-                setBlockingState((prev) => ({
-                  ...prev,
-                  isBlocking: false,
-                  blocked: data.blocked,
-                  total: data.total,
-                  current: remaining > 0
-                    ? `Rate limited - ${remaining} accounts remaining`
-                    : 'Rate limit exceeded',
-                  rateLimitedUntil,
-                  rateLimitRemaining: rateLimitedUntil - Date.now(),
-                  // Don't mark as completed if there are remaining accounts
-                  completedTypes: remaining === 0 && data.blocked > 0 && !prev.completedTypes.includes(type)
-                    ? [...prev.completedTypes, type]
-                    : prev.completedTypes,
-                }))
-                if (data.blocked > 0) {
-                  toast.success(`Blocked ${data.blocked} users before rate limit! ${remaining > 0 ? `${remaining} remaining.` : ''}`)
-                }
-                return
-              } else if (data.type === 'complete') {
-                setBlockingState((prev) => ({
-                  ...prev,
-                  isBlocking: false,
-                  blocked: data.blocked,
-                  current: 'Complete!',
-                  completedTypes: prev.completedTypes.includes(type)
-                    ? prev.completedTypes
-                    : [...prev.completedTypes, type],
-                }))
-                toast.success(`Blocked ${data.blocked} users!`)
-                return
-              } else if (data.type === 'error') {
-                throw new Error(data.message || 'Unknown error')
-              }
-            } catch {
-              // Ignore parse errors for incomplete messages
-            }
-          }
-        }
-      }
+      await streamBlocks(targetDids, type)
     } catch {
       toast.error('An error occurred while blocking')
       setBlockingState((prev) => ({
@@ -478,7 +525,7 @@ function HomePage() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground text-center">
-                      Blocked {blockingState.blocked} of {blockingState.total} so far. Rate limits are set by Bluesky.
+                      Blocked {blockingState.blocked} of {blockingState.total} so far. Will auto-resume when ready.
                     </p>
                   </div>
                 )}
