@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { Agent } from '@atproto/api'
 import { setCookie, getCookie } from '@tanstack/start-server-core'
+import { logger } from './logger'
 
 // Validation helpers
 const DID_REGEX = /^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$/
@@ -82,7 +83,7 @@ export const getOAuthUrl = createServerFn({ method: 'GET' })
 
       return { url: url.toString() }
     } catch (error) {
-      console.error('[OAuth] Authorize failed')
+      logger.error('OAuth authorize failed', error, { action: 'oauth_authorize', userHandle: data.handle })
       throw error
     }
   })
@@ -117,6 +118,8 @@ export const handleOAuthCallback = createServerFn({ method: 'GET' })
         avatar: profile.data.avatar || '',
       })
 
+      logger.info('User logged in', { action: 'login', userId: did, userHandle: profile.data.handle })
+
       return {
         success: true,
         user: {
@@ -127,7 +130,7 @@ export const handleOAuthCallback = createServerFn({ method: 'GET' })
         },
       }
     } catch (error) {
-      console.error('[OAuth Callback] Authentication failed')
+      logger.error('OAuth callback failed', error, { action: 'oauth_callback' })
       throw error
     }
   })
@@ -160,7 +163,7 @@ export const searchProfiles = createServerFn({ method: 'GET' })
         })),
       }
     } catch (error) {
-      console.error('[Search] Search failed')
+      logger.error('Profile search failed', error, { action: 'search' })
       return { profiles: [] }
     }
   })
@@ -193,7 +196,7 @@ export const getProfile = createServerFn({ method: 'GET' })
         },
       }
     } catch (error) {
-      console.error('[GetProfile] Failed to fetch profile')
+      logger.error('Failed to fetch profile', error, { action: 'get_profile', targetHandle: data.handle })
       return { success: false, profile: null }
     }
   })
@@ -237,7 +240,7 @@ export const getFollowers = createServerFn({ method: 'GET' })
         cursor: result.data.cursor,
       }
     } catch (error) {
-      console.error('[GetFollowers] Failed to fetch followers')
+      logger.error('Failed to fetch followers', error, { action: 'get_followers', targetDid: data.targetDid })
       return { success: false, followers: [], cursor: undefined }
     }
   })
@@ -281,7 +284,7 @@ export const getFollowing = createServerFn({ method: 'GET' })
         cursor: result.data.cursor,
       }
     } catch (error) {
-      console.error('[GetFollowing] Failed to fetch following')
+      logger.error('Failed to fetch following', error, { action: 'get_following', targetDid: data.targetDid })
       return { success: false, following: [], cursor: undefined }
     }
   })
@@ -342,7 +345,7 @@ export const getMutuals = createServerFn({ method: 'GET' })
 
       return { success: true, mutualDids }
     } catch (error) {
-      console.error('[GetMutuals] Failed to fetch mutuals')
+      logger.error('Failed to fetch mutuals', error, { action: 'get_mutuals' })
       return { success: false, mutualDids: [] }
     }
   })
@@ -377,7 +380,7 @@ export const getBlockedDids = createServerFn({ method: 'GET' })
 
       return { success: true, blockedDids: [...blockedDids] }
     } catch (error) {
-      console.error('[GetBlockedDids] Failed to fetch blocked users')
+      logger.error('Failed to fetch blocked users', error, { action: 'get_blocked' })
       return { success: false, blockedDids: [] }
     }
   })
@@ -412,9 +415,10 @@ export const blockUser = createServerFn({ method: 'POST' })
         }
       )
 
+      logger.info('User blocked', { action: 'block', userId: userDid, targetDid: data.targetDid })
       return { success: true }
     } catch (error) {
-      console.error('[BlockUser] Failed to block user')
+      logger.error('Failed to block user', error, { action: 'block', targetDid: data.targetDid })
       return { success: false }
     }
   })
@@ -424,15 +428,19 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 export const blockUsersBatch = createServerFn({ method: 'POST' })
   .inputValidator((data: { targetDids: string[] }) => data)
   .handler(async ({ data }) => {
+    const timer = logger.time('block_batch')
+
     // Get authenticated user from httpOnly cookie - prevents DID spoofing
     const userDid = getAuthenticatedDid()
     if (!userDid) {
+      logger.warn('Block batch attempted without auth', { action: 'block_batch' })
       return { success: false, blocked: 0, error: 'Not authenticated' }
     }
 
     // Validate all targetDids
     const invalidDids = data.targetDids.filter((did) => !isValidDid(did))
     if (invalidDids.length > 0) {
+      logger.warn('Block batch with invalid DIDs', { action: 'block_batch', userId: userDid, count: invalidDids.length })
       return { success: false, blocked: 0, error: `Invalid DIDs: ${invalidDids.length} invalid` }
     }
 
@@ -462,6 +470,13 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
           writes,
         })
 
+        const duration = timer()
+        logger.info('Batch block completed', {
+          action: 'block_batch',
+          userId: userDid,
+          count: data.targetDids.length,
+          duration,
+        })
         return { success: true, blocked: data.targetDids.length }
       } catch (error: unknown) {
         const err = error as {
@@ -493,6 +508,11 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
               resetMessage = 'Rate limit exceeded. Please wait ~1 hour for your Bluesky rate limit to reset.'
             }
 
+            logger.warn('Rate limit hit during batch block', {
+              action: 'block_batch',
+              userId: userDid,
+              count: data.targetDids.length,
+            })
             return {
               success: false,
               blocked: 0,
@@ -505,21 +525,41 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
 
         // Upstream failure - wait 1 second and retry
         if (err.status === 502 || err.message === 'UpstreamFailure') {
+          logger.warn('Upstream failure during batch block, retrying', {
+            action: 'block_batch',
+            userId: userDid,
+            attempt: attempt + 1,
+          })
           await sleep(1000)
           continue
         }
 
         // Socket error - usually means server closed connection (often due to rate limiting)
         if (err.message?.includes('UND_ERR_SOCKET') || err.message?.includes('socket')) {
+          logger.warn('Socket error during batch block, retrying', {
+            action: 'block_batch',
+            userId: userDid,
+            attempt: attempt + 1,
+          })
           await sleep(5000)
           continue
         }
 
         // Other error - don't retry
+        logger.error('Batch block failed', error, {
+          action: 'block_batch',
+          userId: userDid,
+          count: data.targetDids.length,
+        })
         return { success: false, blocked: 0, error: 'Block operation failed' }
       }
     }
 
     // All retries exhausted
+    logger.error('Batch block max retries exceeded', undefined, {
+      action: 'block_batch',
+      userId: userDid,
+      count: data.targetDids.length,
+    })
     return { success: false, blocked: 0, error: 'Max retries exceeded' }
   })
