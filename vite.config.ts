@@ -37,6 +37,11 @@ const config = defineConfig({
           route: '/.well-known/oauth-client.json',
           handler: './server/oauth-metadata.ts',
         },
+        {
+          route: '/api/block-stream',
+          method: 'POST',
+          handler: './server/api/block-stream.ts',
+        },
       ],
     }),
     tailwindcss(),

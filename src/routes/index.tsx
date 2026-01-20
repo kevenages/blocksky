@@ -7,7 +7,7 @@ import { Shield, Users, Zap, Lock, X, Loader2, Heart, Clock } from 'lucide-react
 import { useAuth } from '@/hooks/use-auth'
 import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
-import { getProfile, getFollowers, getFollowing, getMutuals, blockUsersBatch } from '@/lib/auth.server'
+import { getProfile, getFollowers, getFollowing, getMutuals } from '@/lib/auth.server'
 import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
 
@@ -124,11 +124,7 @@ function HomePage() {
     await performBlocking('following')
   }
 
-  // Smaller batches since we're now blocking individually on the server
-  // Each batch = N individual block.create calls with 50ms delay
-  const BATCH_SIZE = 100
-
-  // Format milliseconds to MM:SS
+// Format milliseconds to MM:SS
   const formatCountdown = (ms: number): string => {
     const totalSeconds = Math.ceil(ms / 1000)
     const minutes = Math.floor(totalSeconds / 60)
@@ -220,68 +216,81 @@ function HomePage() {
         return
       }
 
-      // Block in batches
-      let blocked = 0
-      let failed = 0
+      // Stream blocking progress in real-time
+      const targetDids = toBlock.map((u) => u.did)
 
-      for (let i = 0; i < toBlock.length; i += BATCH_SIZE) {
-        const batch = toBlock.slice(i, i + BATCH_SIZE)
-        const batchDids = batch.map((u) => u.did)
+      const response = await fetch('/api/block-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetDids }),
+      })
 
-        try {
-          const result = await blockUsersBatch({ data: { targetDids: batchDids } })
-
-          if (result.success) {
-            blocked += result.blocked
-          } else {
-            failed += batchDids.length
-            toast.error(`Failed to block batch: ${(result as { error?: string }).error || 'Unknown error'}`)
-          }
-        } catch {
-          failed += batchDids.length
-          toast.error('Failed to block batch')
-        }
-
-        setBlockingState((prev) => ({
-          ...prev,
-          blocked,
-          current: `Blocked ${blocked} of ${toBlock.length} users...`,
-        }))
-
-        // Small delay between batches (server handles per-block delays)
-        if (i + BATCH_SIZE < toBlock.length) {
-          await new Promise((resolve) => setTimeout(resolve, 100))
-        }
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to start blocking')
       }
 
-      // Only mark as completed if we actually blocked some users
-      if (blocked > 0) {
-        setBlockingState((prev) => ({
-          ...prev,
-          isBlocking: false,
-          current: 'Complete!',
-          completedTypes: prev.completedTypes.includes(type)
-            ? prev.completedTypes
-            : [...prev.completedTypes, type],
-        }))
-        toast.success(`Blocked ${blocked} users!`)
-      } else {
-        if (failed > 0) {
-          // Rate limit hit - set countdown for ~5 minutes from now (Bluesky resets every 5 min)
-          const rateLimitedUntil = Date.now() + 5 * 60 * 1000
-          setBlockingState((prev) => ({
-            ...prev,
-            isBlocking: false,
-            current: 'Rate limit exceeded',
-            rateLimitedUntil,
-            rateLimitRemaining: 5 * 60 * 1000,
-          }))
-        } else {
-          setBlockingState((prev) => ({
-            ...prev,
-            isBlocking: false,
-            current: 'No users to block',
-          }))
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete messages (SSE format: "event: message\ndata: {...}\n\n")
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+
+              if (data.type === 'progress') {
+                setBlockingState((prev) => ({
+                  ...prev,
+                  blocked: data.blocked,
+                  current: `Blocked ${data.blocked} of ${data.total} users...`,
+                }))
+              } else if (data.type === 'rate_limit') {
+                // Rate limit hit - set countdown for ~5 minutes
+                const rateLimitedUntil = Date.now() + 5 * 60 * 1000
+                setBlockingState((prev) => ({
+                  ...prev,
+                  isBlocking: false,
+                  blocked: data.blocked,
+                  current: 'Rate limit exceeded',
+                  rateLimitedUntil,
+                  rateLimitRemaining: 5 * 60 * 1000,
+                  completedTypes: data.blocked > 0 && !prev.completedTypes.includes(type)
+                    ? [...prev.completedTypes, type]
+                    : prev.completedTypes,
+                }))
+                if (data.blocked > 0) {
+                  toast.success(`Blocked ${data.blocked} users before rate limit!`)
+                }
+                return
+              } else if (data.type === 'complete') {
+                setBlockingState((prev) => ({
+                  ...prev,
+                  isBlocking: false,
+                  blocked: data.blocked,
+                  current: 'Complete!',
+                  completedTypes: prev.completedTypes.includes(type)
+                    ? prev.completedTypes
+                    : [...prev.completedTypes, type],
+                }))
+                toast.success(`Blocked ${data.blocked} users!`)
+                return
+              } else if (data.type === 'error') {
+                throw new Error(data.message || 'Unknown error')
+              }
+            } catch {
+              // Ignore parse errors for incomplete messages
+            }
+          }
         }
       }
     } catch {
