@@ -160,11 +160,16 @@ function HomePage() {
     await performBlocking('following')
   }
 
-// Format milliseconds to MM:SS
+// Format milliseconds to human-readable countdown
   const formatCountdown = (ms: number): string => {
     const totalSeconds = Math.ceil(ms / 1000)
-    const minutes = Math.floor(totalSeconds / 60)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
     const seconds = totalSeconds % 60
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`
+    }
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
