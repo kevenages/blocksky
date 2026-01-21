@@ -101,6 +101,19 @@ function HomePage() {
   const pendingDidsRef = useRef<string[]>([])
   const blockingTypeRef = useRef<'followers' | 'following' | null>(null)
 
+  // AbortController for cancelling async operations on unmount
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const mountedRef = useRef(true)
+
+  // Cleanup on unmount - abort any pending operations
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      abortControllerRef.current?.abort()
+    }
+  }, [])
+
   const handleProfileSelect = async (profile: SelectedProfile) => {
     if (!user?.handle) return
 
@@ -160,10 +173,16 @@ function HomePage() {
 
   // Stream blocks to the server and handle responses
   const streamBlocks = async (targetDids: string[], type: 'followers' | 'following', baseBlocked: number = 0) => {
+    // Create new AbortController for this operation
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     const response = await fetch('/api/block-stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetDids }),
+      signal,
     })
 
     if (!response.ok || !response.body) {
@@ -260,7 +279,10 @@ function HomePage() {
     try {
       const currentBlocked = blockingState.blocked
       await streamBlocks(remainingDids, type, currentBlocked)
-    } catch {
+    } catch (error) {
+      // Ignore abort errors (user navigated away or started new operation)
+      if (error instanceof Error && error.name === 'AbortError') return
+
       toast.error('An error occurred while resuming')
       setBlockingState((prev) => ({
         ...prev,
@@ -289,11 +311,13 @@ function HomePage() {
       // for getFollowers/getFollowing already filters them out automatically
       if (!mutualDidsCache.current) {
         const mutualsResult = await getMutuals({ data: {} })
+        if (!mountedRef.current) return
         mutualDidsCache.current = new Set(mutualsResult.mutualDids || [])
       }
 
       const mutualDids = mutualDidsCache.current
 
+      if (!mountedRef.current) return
       setBlockingState((prev) => ({
         ...prev,
         current: `Fetching ${type}...`,
@@ -304,23 +328,30 @@ function HomePage() {
       let cursor: string | undefined
 
       do {
+        if (!mountedRef.current) return
+
         if (type === 'followers') {
           const result = await getFollowers({ data: { targetDid: selectedProfile.did, cursor } })
+          if (!mountedRef.current) return
           if (!result.success) break
           allUsers.push(...result.followers)
           cursor = result.cursor
         } else {
           const result = await getFollowing({ data: { targetDid: selectedProfile.did, cursor } })
+          if (!mountedRef.current) return
           if (!result.success) break
           allUsers.push(...result.following)
           cursor = result.cursor
         }
 
+        if (!mountedRef.current) return
         setBlockingState((prev) => ({
           ...prev,
           current: `Found ${allUsers.length} ${type}...`,
         }))
       } while (cursor)
+
+      if (!mountedRef.current) return
 
       // Filter out mutuals, self, and whitelisted
       // Note: Already blocked users are automatically filtered by the authenticated API
@@ -333,6 +364,7 @@ function HomePage() {
 
       const skippedCount = allUsers.length - toBlock.length
 
+      if (!mountedRef.current) return
       setBlockingState((prev) => ({
         ...prev,
         total: toBlock.length,
@@ -341,6 +373,7 @@ function HomePage() {
       }))
 
       if (toBlock.length === 0) {
+        if (!mountedRef.current) return
         setBlockingState((prev) => ({
           ...prev,
           isBlocking: false,
@@ -357,7 +390,10 @@ function HomePage() {
       blockingTypeRef.current = type
 
       await streamBlocks(targetDids, type)
-    } catch {
+    } catch (error) {
+      // Ignore abort errors (user navigated away or started new operation)
+      if (error instanceof Error && error.name === 'AbortError') return
+
       toast.error('An error occurred while blocking')
       setBlockingState((prev) => ({
         ...prev,

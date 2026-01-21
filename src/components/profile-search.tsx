@@ -27,6 +27,15 @@ export function ProfileSearch({ onSelect, placeholder = "Search by name or handl
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const mountedRef = useRef(true)
+
+  // Track mounted state to prevent state updates after unmount
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   // Debounced search
   useEffect(() => {
@@ -40,13 +49,18 @@ export function ProfileSearch({ onSelect, placeholder = "Search by name or handl
       setIsLoading(true)
       try {
         const response = await searchProfiles({ data: { query } })
+        // Only update state if component is still mounted
+        if (!mountedRef.current) return
         setResults(response.profiles)
         setIsOpen(response.profiles.length > 0)
         setHighlightedIndex(-1)
       } catch {
+        if (!mountedRef.current) return
         setResults([])
       } finally {
-        setIsLoading(false)
+        if (mountedRef.current) {
+          setIsLoading(false)
+        }
       }
     }, 300)
 
