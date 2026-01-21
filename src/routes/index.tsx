@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Shield, Users, Zap, Lock, X, Loader2, Heart, Clock, Wand2 } from 'lucide-react'
+import { Users, Zap, Lock, X, Loader2, Heart, Clock, Wand2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
@@ -146,6 +146,7 @@ function HomePage() {
       completedTypes: [],
       rateLimitedUntil: null,
       rateLimitRemaining: null,
+      sessionBlocks: 0,
     })
   }
 

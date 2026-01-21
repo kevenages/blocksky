@@ -29,6 +29,8 @@ interface LogEntry {
   // Cloud Logging specific fields
   'logging.googleapis.com/trace'?: string
   'logging.googleapis.com/spanId'?: string
+  // Error Reporting type field
+  '@type'?: string
 }
 
 function formatLog(severity: LogSeverity, message: string, context?: LogContext, error?: Error): string {
@@ -51,7 +53,7 @@ function formatLog(severity: LogSeverity, message: string, context?: LogContext,
     // Error Reporting looks for this format
     if (severity === 'ERROR' || severity === 'CRITICAL') {
       // Include @type for Error Reporting to pick it up
-      (entry as Record<string, unknown>)['@type'] = 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'
+      entry['@type'] = 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent'
     }
   }
 
@@ -84,7 +86,7 @@ export const logger = {
   },
 
   // Helper for timing operations
-  time(label: string): () => number {
+  time(_label: string): () => number {
     const start = Date.now()
     return () => Date.now() - start
   },

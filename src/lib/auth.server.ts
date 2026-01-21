@@ -15,6 +15,43 @@ function isValidHandle(handle: string): boolean {
   return HANDLE_REGEX.test(handle)
 }
 
+// Type guard for error objects with status/message/headers
+function isErrorWithStatus(error: unknown): error is { status?: number; message?: string; headers?: Record<string, string> } {
+  if (typeof error !== 'object' || error === null) return false
+  const obj = error as Record<string, unknown>
+  return (
+    (obj.status === undefined || typeof obj.status === 'number') &&
+    (obj.message === undefined || typeof obj.message === 'string') &&
+    (obj.headers === undefined || typeof obj.headers === 'object')
+  )
+}
+
+// Maximum batch size for blocking operations
+const MAX_BATCH_SIZE = 50000
+
+// Validate and format reset time message from external timestamp
+function formatResetMessage(headerValue: string | undefined): string {
+  if (!headerValue) return 'Rate limit exceeded.'
+
+  const parsed = parseInt(headerValue, 10)
+  if (isNaN(parsed) || parsed <= 0) return 'Rate limit exceeded.'
+
+  const resetDate = new Date(parsed * 1000)
+  const now = new Date()
+  const diffMs = resetDate.getTime() - now.getTime()
+  const diffMins = Math.ceil(diffMs / 60000)
+
+  // Validate the time is reasonable (not in past, not more than 24 hours)
+  if (diffMins <= 0) {
+    return 'Rate limit exceeded. It should reset any moment now - try again.'
+  }
+  if (diffMins > 24 * 60) {
+    return 'Rate limit exceeded. Please try again later.'
+  }
+
+  return `Rate limit exceeded. Try again in ${diffMins} minute${diffMins === 1 ? '' : 's'}.`
+}
+
 // Cookie configuration
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 // 30 days
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
@@ -164,7 +201,7 @@ export const searchProfiles = createServerFn({ method: 'GET' })
       }
     } catch (error) {
       logger.error('Profile search failed', error, { action: 'search' })
-      return { profiles: [] }
+      return { profiles: [], error: 'Search failed' }
     }
   })
 
@@ -197,7 +234,7 @@ export const getProfile = createServerFn({ method: 'GET' })
       }
     } catch (error) {
       logger.error('Failed to fetch profile', error, { action: 'get_profile', targetHandle: data.handle })
-      return { success: false, profile: null }
+      return { success: false, profile: null, error: 'Failed to fetch profile' }
     }
   })
 
@@ -241,7 +278,7 @@ export const getFollowers = createServerFn({ method: 'GET' })
       }
     } catch (error) {
       logger.error('Failed to fetch followers', error, { action: 'get_followers', targetDid: data.targetDid })
-      return { success: false, followers: [], cursor: undefined }
+      return { success: false, followers: [], cursor: undefined, error: 'Failed to fetch followers' }
     }
   })
 
@@ -285,7 +322,7 @@ export const getFollowing = createServerFn({ method: 'GET' })
       }
     } catch (error) {
       logger.error('Failed to fetch following', error, { action: 'get_following', targetDid: data.targetDid })
-      return { success: false, following: [], cursor: undefined }
+      return { success: false, following: [], cursor: undefined, error: 'Failed to fetch following' }
     }
   })
 
@@ -346,7 +383,7 @@ export const getMutuals = createServerFn({ method: 'GET' })
       return { success: true, mutualDids }
     } catch (error) {
       logger.error('Failed to fetch mutuals', error, { action: 'get_mutuals' })
-      return { success: false, mutualDids: [] }
+      return { success: false, mutualDids: [], error: 'Failed to fetch mutuals' }
     }
   })
 
@@ -381,7 +418,7 @@ export const getBlockedDids = createServerFn({ method: 'GET' })
       return { success: true, blockedDids: [...blockedDids] }
     } catch (error) {
       logger.error('Failed to fetch blocked users', error, { action: 'get_blocked' })
-      return { success: false, blockedDids: [] }
+      return { success: false, blockedDids: [], error: 'Failed to fetch blocked users' }
     }
   })
 
@@ -419,7 +456,7 @@ export const blockUser = createServerFn({ method: 'POST' })
       return { success: true }
     } catch (error) {
       logger.error('Failed to block user', error, { action: 'block', targetDid: data.targetDid })
-      return { success: false }
+      return { success: false, error: 'Failed to block user' }
     }
   })
 
@@ -436,6 +473,12 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
     if (!userDid) {
       logger.warn('Block batch attempted without auth', { action: 'block_batch' })
       return { success: false, blocked: 0, error: 'Not authenticated' }
+    }
+
+    // Enforce batch size limit
+    if (data.targetDids.length > MAX_BATCH_SIZE) {
+      logger.warn('Block batch too large', { action: 'block_batch', userId: userDid, count: data.targetDids.length })
+      return { success: false, blocked: 0, error: `Too many targets. Maximum is ${MAX_BATCH_SIZE}` }
     }
 
     // Validate all targetDids
@@ -467,29 +510,14 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
           blocked++
           break // Success, move to next user
         } catch (error: unknown) {
-          const err = error as {
-            status?: number
-            message?: string
-            headers?: Record<string, string>
-          }
+          // Safely extract status, message, and headers using type guard
+          const status = isErrorWithStatus(error) ? error.status : undefined
+          const message = isErrorWithStatus(error) ? error.message : undefined
+          const headers = isErrorWithStatus(error) ? error.headers : undefined
 
           // Rate limit - return partial progress with error
-          if (err.status === 429 || err.message?.includes('Rate Limit')) {
-            const resetTimestamp = err.headers?.['ratelimit-reset']
-            let resetMessage = 'Rate limit exceeded.'
-
-            if (resetTimestamp) {
-              const resetDate = new Date(parseInt(resetTimestamp) * 1000)
-              const now = new Date()
-              const diffMs = resetDate.getTime() - now.getTime()
-              const diffMins = Math.ceil(diffMs / 60000)
-
-              if (diffMins > 0) {
-                resetMessage = `Rate limit exceeded. Try again in ${diffMins} minute${diffMins === 1 ? '' : 's'}.`
-              } else {
-                resetMessage = 'Rate limit exceeded. It should reset any moment now - try again.'
-              }
-            }
+          if (status === 429 || message?.includes('Rate Limit')) {
+            const resetMessage = formatResetMessage(headers?.['ratelimit-reset'])
 
             logger.warn('Rate limit hit during blocking', {
               action: 'block_batch',
@@ -507,7 +535,7 @@ export const blockUsersBatch = createServerFn({ method: 'POST' })
           }
 
           // Upstream failure - wait and retry
-          if (err.status === 502 || err.message === 'UpstreamFailure') {
+          if (status === 502 || message === 'UpstreamFailure') {
             await sleep(500)
             continue
           }

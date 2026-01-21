@@ -3,9 +3,43 @@ import { Agent } from '@atproto/api'
 import { XRPCError } from '@atproto/xrpc'
 
 const DID_REGEX = /^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$/
+const MAX_BATCH_SIZE = 50000 // Maximum DIDs per request
 
 function isValidDid(did: string): boolean {
   return DID_REGEX.test(did)
+}
+
+// Type guard for error objects with status/message
+function isErrorWithStatus(error: unknown): error is { status?: number; message?: string } {
+  if (typeof error !== 'object' || error === null) return false
+  const obj = error as Record<string, unknown>
+  return (
+    (obj.status === undefined || typeof obj.status === 'number') &&
+    (obj.message === undefined || typeof obj.message === 'string')
+  )
+}
+
+// Validate and sanitize timestamp from external source
+// Returns a safe timestamp within reasonable bounds (now to 24 hours from now)
+function sanitizeResetTimestamp(headerValue: string | undefined): number {
+  const DEFAULT_RESET = Date.now() + 5 * 60 * 1000 // 5 minutes from now
+  const MAX_WAIT = 24 * 60 * 60 * 1000 // 24 hours max wait
+
+  if (!headerValue) return DEFAULT_RESET
+
+  const parsed = parseInt(headerValue, 10)
+  if (isNaN(parsed) || parsed <= 0) return DEFAULT_RESET
+
+  const resetMs = parsed * 1000 // Convert Unix timestamp (seconds) to milliseconds
+  const now = Date.now()
+
+  // If reset time is in the past, use default
+  if (resetMs <= now) return DEFAULT_RESET
+
+  // If reset time is more than 24 hours away, cap it
+  if (resetMs > now + MAX_WAIT) return now + MAX_WAIT
+
+  return resetMs
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -23,6 +57,11 @@ export default defineEventHandler(async (event) => {
 
   if (!targetDids.length) {
     return { error: 'No targets provided' }
+  }
+
+  // Enforce batch size limit to prevent abuse
+  if (targetDids.length > MAX_BATCH_SIZE) {
+    return { error: `Too many targets. Maximum is ${MAX_BATCH_SIZE}` }
   }
 
   // Validate all DIDs
@@ -65,16 +104,16 @@ export default defineEventHandler(async (event) => {
           } catch (error: unknown) {
             // Check if it's an XRPCError with headers
             const xrpcError = error instanceof XRPCError ? error : null
-            const err = error as {
-              status?: number
-              message?: string
-            }
+
+            // Safely extract status and message using type guard
+            const status = isErrorWithStatus(error) ? error.status : undefined
+            const message = isErrorWithStatus(error) ? error.message : undefined
 
             // Rate limit - send error with reset time from headers
-            if (err.status === 429 || err.message?.includes('Rate Limit')) {
-              // Extract reset timestamp from headers (Unix timestamp in seconds)
+            if (status === 429 || message?.includes('Rate Limit')) {
+              // Extract and validate reset timestamp from headers
               const resetHeader = xrpcError?.headers?.['ratelimit-reset']
-              const resetAt = resetHeader ? parseInt(resetHeader, 10) * 1000 : Date.now() + 5 * 60 * 1000
+              const resetAt = sanitizeResetTimestamp(resetHeader)
 
               await eventStream.push(JSON.stringify({
                 type: 'rate_limit',
@@ -89,7 +128,7 @@ export default defineEventHandler(async (event) => {
             }
 
             // Upstream failure - wait and retry
-            if (err.status === 502 || err.message === 'UpstreamFailure') {
+            if (status === 502 || message === 'UpstreamFailure') {
               await sleep(500)
               continue
             }
