@@ -25,6 +25,9 @@ export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
+// Bluesky rate limit: ~1,500 blocks per hour
+const HOURLY_BLOCK_LIMIT = 1500
+
 interface BlockingState {
   isBlocking: boolean
   type: 'followers' | 'following' | null
@@ -35,6 +38,7 @@ interface BlockingState {
   completedTypes: Array<'followers' | 'following'>
   rateLimitedUntil: number | null
   rateLimitRemaining: number | null
+  sessionBlocks: number // Total blocks this session
 }
 
 function HomePage() {
@@ -51,6 +55,7 @@ function HomePage() {
     completedTypes: [],
     rateLimitedUntil: null,
     rateLimitRemaining: null,
+    sessionBlocks: 0,
   })
 
   // Countdown timer for rate limit
@@ -187,6 +192,7 @@ function HomePage() {
               setBlockingState((prev) => ({
                 ...prev,
                 blocked: baseBlocked + data.blocked,
+                sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
                 current: `Blocked ${baseBlocked + data.blocked} of ${prev.total} users...`,
               }))
             } else if (data.type === 'rate_limit') {
@@ -202,6 +208,7 @@ function HomePage() {
                 ...prev,
                 isBlocking: false,
                 blocked: baseBlocked + data.blocked,
+                sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
                 current: remainingDids.length > 0
                   ? `Rate limited - ${remainingDids.length} accounts remaining`
                   : 'Rate limit exceeded',
@@ -224,6 +231,7 @@ function HomePage() {
                 ...prev,
                 isBlocking: false,
                 blocked: baseBlocked + data.blocked,
+                sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
                 current: 'Complete!',
                 completedTypes: prev.completedTypes.includes(type)
                   ? prev.completedTypes
@@ -501,6 +509,16 @@ function HomePage() {
                     <p className="text-xs text-center text-muted-foreground">
                       Your mutuals will never be blocked
                     </p>
+
+                    {/* Rate limit info */}
+                    <div className="text-xs text-center text-muted-foreground pt-2 border-t">
+                      <p>Bluesky limits blocking to ~{HOURLY_BLOCK_LIMIT.toLocaleString()}/hour.</p>
+                      {blockingState.sessionBlocks > 0 && (
+                        <p className="mt-1">
+                          Session: <strong>{blockingState.sessionBlocks.toLocaleString()}</strong> blocked
+                        </p>
+                      )}
+                    </div>
                   </>
                 )}
 
@@ -527,6 +545,11 @@ function HomePage() {
                     <p className="text-xs text-muted-foreground text-center">
                       Blocked {blockingState.blocked} of {blockingState.total} so far. Will auto-resume when ready.
                     </p>
+                    {blockingState.sessionBlocks > 0 && (
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        Session total: {blockingState.sessionBlocks.toLocaleString()} / ~{HOURLY_BLOCK_LIMIT.toLocaleString()} per hour
+                      </p>
+                    )}
                   </div>
                 )}
 

@@ -42,6 +42,7 @@ CLAUDE.md
 .wrangler
 
 # Internal testing scripts
+scripts/
 wipe-blocks.mjs
 service-account.json
 public/.well-known/oauth-client.json
