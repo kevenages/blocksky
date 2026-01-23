@@ -1044,6 +1044,13 @@ function HomePage() {
         <div className="w-full max-w-4xl">
           <h2 className="text-2xl font-bold text-center mb-6">Frequently Asked Questions</h2>
           <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="close-page">
+              <AccordionTrigger>Can I close the page while blocking?</AccordionTrigger>
+              <AccordionContent>
+                No, you need to keep the page open until blocking completes. If you close or navigate away, blocking will stop. Any accounts already blocked will stay blocked, but remaining accounts won't be processed. If you hit a rate limit, BlockSky will automatically resume when the limit resets - just keep the page open.
+              </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="speed">
               <AccordionTrigger>Why does blocking take so long?</AccordionTrigger>
               <AccordionContent>
@@ -1098,13 +1105,6 @@ function HomePage() {
               <AccordionTrigger>Why are some accounts skipped?</AccordionTrigger>
               <AccordionContent>
                 Accounts are skipped if they're your mutuals, if you've already blocked them, or if they're official Bluesky accounts (like @bsky.app). This prevents accidentally blocking important accounts.
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="closed">
-              <AccordionTrigger>What happens if I close the page while blocking?</AccordionTrigger>
-              <AccordionContent>
-                If you close the page, the blocking process will stop. Any accounts already blocked will remain blocked, but remaining accounts won't be processed. Keep the page open until blocking completes or hits a rate limit pause.
               </AccordionContent>
             </AccordionItem>
 
