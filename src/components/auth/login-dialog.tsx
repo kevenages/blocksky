@@ -29,8 +29,16 @@ export function LoginDialog({ trigger }: LoginDialogProps) {
     e.preventDefault()
     console.log('[OAuth] handleOAuthSubmit called')
 
-    if (!handle.trim()) {
+    const trimmedHandle = handle.trim()
+    if (!trimmedHandle) {
       toast.error('Please enter your Bluesky handle')
+      return
+    }
+
+    // Validate handle format before attempting OAuth
+    const HANDLE_REGEX = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
+    if (!HANDLE_REGEX.test(trimmedHandle)) {
+      toast.error('Invalid handle format. Example: username.bsky.social')
       return
     }
 
@@ -51,8 +59,16 @@ export function LoginDialog({ trigger }: LoginDialogProps) {
   const handleAppPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!handle.trim()) {
+    const trimmedHandle = handle.trim()
+    if (!trimmedHandle) {
       toast.error('Please enter your Bluesky handle')
+      return
+    }
+
+    // Validate handle format
+    const HANDLE_REGEX = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
+    if (!HANDLE_REGEX.test(trimmedHandle)) {
+      toast.error('Invalid handle format. Example: username.bsky.social')
       return
     }
 
