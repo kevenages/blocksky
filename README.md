@@ -11,8 +11,23 @@ BlockSky is a free tool that helps you quickly block large numbers of accounts o
 - **Mass Blocking** - Block hundreds or thousands of accounts with one click
 - **Mutual Protection** - Your mutuals (people you follow who follow you back) are never blocked
 - **Whitelist Protection** - Official Bluesky accounts are automatically protected
-- **Secure** - Uses Bluesky's official OAuth. Your password is never stored.
+- **Two Login Options** - Choose between secure OAuth or faster App Password
 - **Real-time Progress** - Watch as accounts are blocked with live updates
+
+## Login Options
+
+BlockSky offers two ways to sign in:
+
+### Quick Login (OAuth)
+- **Most secure** - Your credentials never touch BlockSky
+- You authenticate directly with Bluesky
+- May hit Bluesky's rate limits sooner
+
+### App Password
+- **Faster blocking** - Can block more accounts before hitting rate limits
+- Works like the original BlockSky
+- Create an app password in Bluesky Settings → Privacy → App Passwords
+- You can revoke it anytime from your Bluesky settings
 
 ## How to Use
 
@@ -22,11 +37,12 @@ BlockSky is a free tool that helps you quickly block large numbers of accounts o
 4. Click "Block Followers" or "Block Following"
 5. Done! Your mutuals are automatically protected.
 
-## Privacy
+## Privacy & Security
 
 - We never store your Bluesky password
-- We use Bluesky's official OAuth for secure authentication
-- Your session data is stored securely and never shared
+- **OAuth users**: Authenticate directly with Bluesky. Tokens stored in secure HTTP-only cookies.
+- **App Password users**: Session tokens stored securely. Only temporarily accessible during active blocking operations.
+- Your session data is never shared
 - See our full [Privacy Policy](https://blocksky.app) for details
 
 ## Support

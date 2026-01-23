@@ -1,15 +1,29 @@
 import { useState, useRef, useEffect } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useSearch, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Users, Zap, Lock, X, Loader2, Heart, Clock, Wand2 } from 'lucide-react'
+import { Users, Zap, Lock, X, Loader2, Heart, Clock, Wand2, MessageSquare } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
 import { getProfile, getFollowers, getFollowing, getMutuals } from '@/lib/auth.server'
 import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
+import { blockUsersClientSide, getBlockingTokens } from '@/lib/client-blocker'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface SelectedProfile {
   did: string
@@ -23,10 +37,24 @@ interface SelectedProfile {
 
 export const Route = createFileRoute('/')({
   component: HomePage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    error: search.error as string | undefined,
+  }),
 })
 
-// Bluesky rate limit: ~1,500 blocks per hour
-const HOURLY_BLOCK_LIMIT = 1500
+// Get auth method from cookie
+function getAuthMethod(): string | undefined {
+  if (typeof document === 'undefined') return undefined
+  const cookies = Object.fromEntries(
+    document.cookie.split(';').map((cookie) => {
+      const [key, ...value] = cookie.trim().split('=')
+      return [key, decodeURIComponent(value.join('='))]
+    })
+  )
+  return cookies['auth_method']
+}
+
+// Bluesky rate limits blocking operations
 
 interface BlockingState {
   isBlocking: boolean
@@ -43,6 +71,8 @@ interface BlockingState {
 
 function HomePage() {
   const { isAuthenticated, isLoading, user } = useAuth()
+  const { error } = useSearch({ from: '/' })
+  const navigate = useNavigate()
   const [selectedProfile, setSelectedProfile] = useState<SelectedProfile | null>(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [blockingState, setBlockingState] = useState<BlockingState>({
@@ -57,6 +87,21 @@ function HomePage() {
     rateLimitRemaining: null,
     sessionBlocks: 0,
   })
+
+  // Handle URL error parameters (e.g., from failed OAuth)
+  useEffect(() => {
+    if (error) {
+      const errorMessages: Record<string, string> = {
+        invalid_handle: 'Invalid Bluesky handle. Please check and try again.',
+        login_failed: 'Login failed. Please try again.',
+        oauth_error: 'Authentication error. Please try again.',
+      }
+      const message = errorMessages[error] || 'An error occurred. Please try again.'
+      toast.error(message)
+      // Clear the error from URL
+      navigate({ to: '/', search: {}, replace: true })
+    }
+  }, [error, navigate])
 
   // Countdown timer for rate limit
   useEffect(() => {
@@ -100,6 +145,9 @@ function HomePage() {
   // Store pending DIDs for auto-resume after rate limit
   const pendingDidsRef = useRef<string[]>([])
   const blockingTypeRef = useRef<'followers' | 'following' | null>(null)
+
+  // Store temporary tokens for client-side blocking (only during active blocking)
+  const tempTokensRef = useRef<{ userDid: string; accessJwt: string; refreshJwt: string } | null>(null)
 
   // AbortController for cancelling async operations on unmount
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -173,6 +221,24 @@ function HomePage() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
+  // Estimate total time based on blocking speed
+  // App password: ~5,000 blocks/hour (client-side, faster)
+  // OAuth: ~1,666 blocks/hour (server-side, stricter rate limits)
+  const estimateTime = (count: number, isAppPassword: boolean): string => {
+    const BLOCKS_PER_HOUR = isAppPassword ? 5000 : 1666
+    if (count <= BLOCKS_PER_HOUR) {
+      return 'under 1 hour'
+    }
+    const hours = Math.ceil(count / BLOCKS_PER_HOUR)
+    if (hours === 1) {
+      return '~1 hour'
+    }
+    return `~${hours} hours`
+  }
+
+  // Check if user is logged in with app password
+  const isAppPasswordAuth = getAuthMethod() === 'app_password'
+
   const isWhitelisted = (handle: string): boolean => {
     return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === 'bsky.app'
   }
@@ -218,7 +284,7 @@ function HomePage() {
                 ...prev,
                 blocked: baseBlocked + data.blocked,
                 sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
-                current: `Blocked ${baseBlocked + data.blocked} of ${prev.total} users...`,
+                current: `Blocked ${(baseBlocked + data.blocked).toLocaleString()} of ${prev.total.toLocaleString()} users...`,
               }))
             } else if (data.type === 'rate_limit') {
               const rateLimitedUntil = data.resetAt || Date.now() + 5 * 60 * 1000
@@ -235,7 +301,7 @@ function HomePage() {
                 blocked: baseBlocked + data.blocked,
                 sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
                 current: remainingDids.length > 0
-                  ? `Rate limited - ${remainingDids.length} accounts remaining`
+                  ? `Rate limited - ${remainingDids.length.toLocaleString()} accounts remaining`
                   : 'Rate limit exceeded',
                 rateLimitedUntil,
                 rateLimitRemaining: rateLimitedUntil - Date.now(),
@@ -244,7 +310,7 @@ function HomePage() {
                   : prev.completedTypes,
               }))
               if (data.blocked > 0) {
-                toast.success(`Blocked ${data.blocked} users before rate limit! ${remainingDids.length > 0 ? `${remainingDids.length} remaining - will auto-resume.` : ''}`)
+                toast.success(`Blocked ${data.blocked.toLocaleString()} users before rate limit! ${remainingDids.length > 0 ? `${remainingDids.length.toLocaleString()} remaining - will auto-resume.` : ''}`)
               }
               return
             } else if (data.type === 'complete') {
@@ -262,7 +328,7 @@ function HomePage() {
                   ? prev.completedTypes
                   : [...prev.completedTypes, type],
               }))
-              toast.success(`Blocked ${baseBlocked + data.blocked} users!`)
+              toast.success(`Blocked ${(baseBlocked + data.blocked).toLocaleString()} users!`)
               return
             } else if (data.type === 'error') {
               throw new Error(data.message || 'Unknown error')
@@ -284,11 +350,79 @@ function HomePage() {
 
     try {
       const currentBlocked = blockingState.blocked
-      await streamBlocks(remainingDids, type, currentBlocked)
+      const authMethod = getAuthMethod()
+
+      // Use client-side blocking for app password users
+      if (authMethod === 'app_password' && tempTokensRef.current) {
+        await blockUsersClientSide(remainingDids, tempTokensRef.current, (progress) => {
+          if (!mountedRef.current) return
+
+          if (progress.type === 'progress') {
+            setBlockingState((prev) => ({
+              ...prev,
+              blocked: currentBlocked + progress.blocked,
+              sessionBlocks: prev.sessionBlocks + (currentBlocked + progress.blocked - prev.blocked),
+              current: `Blocked ${(currentBlocked + progress.blocked).toLocaleString()} of ${prev.total.toLocaleString()} users...`,
+            }))
+          } else if (progress.type === 'rate_limit') {
+            const rateLimitedUntil = progress.resetAt || Date.now() + 5 * 60 * 1000
+            const newRemainingDids = remainingDids.slice(progress.blocked + progress.failed)
+
+            pendingDidsRef.current = newRemainingDids
+
+            setBlockingState((prev) => ({
+              ...prev,
+              isBlocking: false,
+              blocked: currentBlocked + progress.blocked,
+              sessionBlocks: prev.sessionBlocks + (currentBlocked + progress.blocked - prev.blocked),
+              current: newRemainingDids.length > 0
+                ? `Rate limited - ${newRemainingDids.length.toLocaleString()} accounts remaining`
+                : 'Rate limit exceeded',
+              rateLimitedUntil,
+              rateLimitRemaining: rateLimitedUntil - Date.now(),
+              completedTypes: newRemainingDids.length === 0 && (currentBlocked + progress.blocked) > 0 && !prev.completedTypes.includes(type)
+                ? [...prev.completedTypes, type]
+                : prev.completedTypes,
+            }))
+            if (progress.blocked > 0) {
+              toast.success(`Blocked ${progress.blocked.toLocaleString()} more users! ${newRemainingDids.length > 0 ? `${newRemainingDids.length.toLocaleString()} remaining.` : ''}`)
+            }
+          } else if (progress.type === 'complete') {
+            // Clear temporary tokens and pending DIDs
+            tempTokensRef.current = null
+            pendingDidsRef.current = []
+            blockingTypeRef.current = null
+
+            setBlockingState((prev) => ({
+              ...prev,
+              isBlocking: false,
+              blocked: currentBlocked + progress.blocked,
+              sessionBlocks: prev.sessionBlocks + (currentBlocked + progress.blocked - prev.blocked),
+              current: 'Complete!',
+              completedTypes: prev.completedTypes.includes(type)
+                ? prev.completedTypes
+                : [...prev.completedTypes, type],
+            }))
+            toast.success(`Blocked ${(currentBlocked + progress.blocked).toLocaleString()} users total!`)
+          } else if (progress.type === 'error') {
+            tempTokensRef.current = null
+            toast.error(progress.error || 'An error occurred while resuming')
+            setBlockingState((prev) => ({
+              ...prev,
+              isBlocking: false,
+              current: progress.error || 'Error occurred',
+            }))
+          }
+        })
+      } else {
+        // Use server-side blocking for OAuth
+        await streamBlocks(remainingDids, type, currentBlocked)
+      }
     } catch (error) {
       // Ignore abort errors (user navigated away or started new operation)
       if (error instanceof Error && error.name === 'AbortError') return
 
+      tempTokensRef.current = null
       toast.error('An error occurred while resuming')
       setBlockingState((prev) => ({
         ...prev,
@@ -353,7 +487,7 @@ function HomePage() {
         if (!mountedRef.current) return
         setBlockingState((prev) => ({
           ...prev,
-          current: `Found ${allUsers.length} ${type}...`,
+          current: `Found ${allUsers.length.toLocaleString()} ${type}...`,
         }))
       } while (cursor)
 
@@ -395,11 +529,94 @@ function HomePage() {
       // Store type for potential auto-resume
       blockingTypeRef.current = type
 
-      await streamBlocks(targetDids, type)
+      // Use client-side blocking for app password (faster, avoids server rate limits)
+      const authMethod = getAuthMethod()
+      if (authMethod === 'app_password') {
+        // Fetch tokens on-demand (temporary exposure only during blocking)
+        const tokens = await getBlockingTokens()
+        if (!tokens) {
+          toast.error('Failed to get session tokens. Please log in again.')
+          setBlockingState((prev) => ({
+            ...prev,
+            isBlocking: false,
+            current: 'Session error',
+          }))
+          return
+        }
+
+        // Store tokens temporarily for potential auto-resume
+        tempTokensRef.current = tokens
+
+        await blockUsersClientSide(targetDids, tokens, (progress) => {
+          if (!mountedRef.current) return
+
+          if (progress.type === 'progress') {
+            setBlockingState((prev) => ({
+              ...prev,
+              blocked: progress.blocked,
+              sessionBlocks: prev.sessionBlocks + (progress.blocked - prev.blocked),
+              current: `Blocked ${progress.blocked.toLocaleString()} of ${prev.total.toLocaleString()} users...`,
+            }))
+          } else if (progress.type === 'rate_limit') {
+            const rateLimitedUntil = progress.resetAt || Date.now() + 5 * 60 * 1000
+            const remainingDids = targetDids.slice(progress.blocked + progress.failed)
+
+            // Store remaining DIDs for auto-resume (tokens already stored)
+            pendingDidsRef.current = remainingDids
+
+            setBlockingState((prev) => ({
+              ...prev,
+              isBlocking: false,
+              blocked: progress.blocked,
+              sessionBlocks: prev.sessionBlocks + (progress.blocked - prev.blocked),
+              current: remainingDids.length > 0
+                ? `Rate limited - ${remainingDids.length.toLocaleString()} accounts remaining`
+                : 'Rate limit exceeded',
+              rateLimitedUntil,
+              rateLimitRemaining: rateLimitedUntil - Date.now(),
+              completedTypes: remainingDids.length === 0 && progress.blocked > 0 && !prev.completedTypes.includes(type)
+                ? [...prev.completedTypes, type]
+                : prev.completedTypes,
+            }))
+            if (progress.blocked > 0) {
+              toast.success(`Blocked ${progress.blocked.toLocaleString()} users before rate limit! ${remainingDids.length > 0 ? `${remainingDids.length.toLocaleString()} remaining - will auto-resume.` : ''}`)
+            }
+          } else if (progress.type === 'complete') {
+            // Clear temporary tokens and pending DIDs
+            tempTokensRef.current = null
+            pendingDidsRef.current = []
+            blockingTypeRef.current = null
+
+            setBlockingState((prev) => ({
+              ...prev,
+              isBlocking: false,
+              blocked: progress.blocked,
+              sessionBlocks: prev.sessionBlocks + (progress.blocked - prev.blocked),
+              current: 'Complete!',
+              completedTypes: prev.completedTypes.includes(type)
+                ? prev.completedTypes
+                : [...prev.completedTypes, type],
+            }))
+            toast.success(`Blocked ${progress.blocked.toLocaleString()} users!`)
+          } else if (progress.type === 'error') {
+            tempTokensRef.current = null
+            toast.error(progress.error || 'An error occurred while blocking')
+            setBlockingState((prev) => ({
+              ...prev,
+              isBlocking: false,
+              current: progress.error || 'Error occurred',
+            }))
+          }
+        })
+      } else {
+        // Use server-side blocking for OAuth users
+        await streamBlocks(targetDids, type)
+      }
     } catch (error) {
       // Ignore abort errors (user navigated away or started new operation)
       if (error instanceof Error && error.name === 'AbortError') return
 
+      tempTokensRef.current = null
       toast.error('An error occurred while blocking')
       setBlockingState((prev) => ({
         ...prev,
@@ -529,6 +746,30 @@ function HomePage() {
                 {/* Block Options */}
                 {!blockingState.isBlocking && blockingState.completedTypes.length === 0 && !blockingState.rateLimitedUntil && (
                   <>
+                    {/* Time Estimates */}
+                    <div className="text-xs text-center text-muted-foreground bg-muted/30 rounded-lg p-3 space-y-1">
+                      <p className="font-medium text-foreground">
+                        {isAppPasswordAuth ? 'Estimated time' : 'Estimated time (due to Bluesky rate limits)'}
+                      </p>
+                      <div className="flex justify-center gap-6">
+                        {selectedProfile.followersCount && selectedProfile.followersCount > 0 && (
+                          <span>Followers: <strong>{estimateTime(selectedProfile.followersCount, isAppPasswordAuth)}</strong></span>
+                        )}
+                        {selectedProfile.followsCount && selectedProfile.followsCount > 0 && (
+                          <span>Following: <strong>{estimateTime(selectedProfile.followsCount, isAppPasswordAuth)}</strong></span>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground/70 pt-1">
+                        Keep this page open until complete.{' '}
+                        <button
+                          className="underline hover:text-foreground transition-colors"
+                          onClick={() => toast.info('Premium features coming soon! Background blocking will let you close the page.')}
+                        >
+                          Want to close the page instead?
+                        </button>
+                      </p>
+                    </div>
+
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Button
                         className="w-full"
@@ -554,7 +795,7 @@ function HomePage() {
 
                     {/* Rate limit info */}
                     <div className="text-xs text-center text-muted-foreground pt-2 border-t">
-                      <p>Bluesky limits blocking to ~{HOURLY_BLOCK_LIMIT.toLocaleString()}/hour.</p>
+                      <p>Blocking may be rate-limited by Bluesky.</p>
                       {blockingState.sessionBlocks > 0 && (
                         <p className="mt-1">
                           Session: <strong>{blockingState.sessionBlocks.toLocaleString()}</strong> blocked
@@ -569,8 +810,11 @@ function HomePage() {
                   <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 space-y-3">
                     <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                       <Clock className="h-5 w-5" />
-                      <span className="font-medium">Rate limit reached</span>
+                      <span className="font-medium">Bluesky rate limit reached</span>
                     </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Bluesky limits how fast you can block accounts. This is enforced by Bluesky's API, not BlockSky.
+                    </p>
                     <div className="text-center">
                       <div className="text-3xl font-mono font-bold text-amber-600 dark:text-amber-400">
                         {formatCountdown(blockingState.rateLimitRemaining)}
@@ -580,16 +824,16 @@ function HomePage() {
                       </p>
                       {blockingState.total - blockingState.blocked > 0 && (
                         <p className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-2">
-                          {blockingState.total - blockingState.blocked} accounts remaining
+                          {(blockingState.total - blockingState.blocked).toLocaleString()} accounts remaining
                         </p>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground text-center">
-                      Blocked {blockingState.blocked} of {blockingState.total} so far. Will auto-resume when ready.
+                      Blocked {blockingState.blocked.toLocaleString()} of {blockingState.total.toLocaleString()} so far. Will auto-resume when ready.
                     </p>
                     {blockingState.sessionBlocks > 0 && (
                       <p className="text-xs text-muted-foreground text-center mt-2">
-                        Session total: {blockingState.sessionBlocks.toLocaleString()} / ~{HOURLY_BLOCK_LIMIT.toLocaleString()} per hour
+                        Session total: {blockingState.sessionBlocks.toLocaleString()} blocked
                       </p>
                     )}
                   </div>
@@ -612,10 +856,10 @@ function HomePage() {
                     {blockingState.isBlocking && blockingState.total > 0 && (
                       <div className="flex gap-4 text-sm">
                         <span className="text-green-600">
-                          {blockingState.blocked} blocked
+                          {blockingState.blocked.toLocaleString()} blocked
                         </span>
                         <span className="text-muted-foreground">
-                          {blockingState.skipped} skipped
+                          {blockingState.skipped.toLocaleString()} skipped
                         </span>
                       </div>
                     )}
@@ -734,6 +978,143 @@ function HomePage() {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Links Section */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 py-8 w-full max-w-4xl bg-muted/30 rounded-lg px-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://bsky.app/profile/blocksky.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-lg font-medium text-muted-foreground hover:text-blue-500 transition-colors"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 600 530" fill="currentColor">
+                    <path d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z"/>
+                  </svg>
+                  @blocksky.app
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Follow us on Bluesky for updates</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://ko-fi.com/blockskyapp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-lg font-medium text-muted-foreground hover:text-pink-500 transition-colors"
+                >
+                  <Heart className="h-5 w-5" />
+                  Support us on Ko-fi
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Help keep BlockSky free for everyone</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://forms.gle/2AEBdooVL12AjgLN8"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-lg font-medium text-muted-foreground hover:text-green-500 transition-colors"
+                >
+                  <MessageSquare className="h-5 w-5" />
+                  Send Feedback
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Help us improve BlockSky</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="w-full max-w-4xl">
+          <h2 className="text-2xl font-bold text-center mb-6">Frequently Asked Questions</h2>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="speed">
+              <AccordionTrigger>Why does blocking take so long?</AccordionTrigger>
+              <AccordionContent>
+                Bluesky limits how fast you can perform actions like blocking through their API. This rate limit is enforced by Bluesky, not BlockSky. If you hit the limit, BlockSky will automatically pause and resume when the limit resets.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="login-methods">
+              <AccordionTrigger>What's the difference between Quick Login and App Password?</AccordionTrigger>
+              <AccordionContent>
+                <p className="mb-2"><strong>Quick Login (OAuth)</strong> is more secure. Your credentials are never shared with BlockSky - you authenticate directly with Bluesky. However, blocking runs through our server, which may hit rate limits faster.</p>
+                <p><strong>App Password</strong> allows faster blocking because requests go directly from your browser to Bluesky (like the original BlockSky). The tradeoff is that your session tokens are temporarily accessible to JavaScript during active blocking. You can revoke app passwords anytime in Bluesky Settings → Privacy → App Passwords.</p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="old-version">
+              <AccordionTrigger>Why did the older version of BlockSky seem faster?</AccordionTrigger>
+              <AccordionContent>
+                The older version ran blocking directly in your browser. If you sign in with an App Password, BlockSky uses this same faster approach. OAuth users get enhanced security but may hit rate limits sooner.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="safety">
+              <AccordionTrigger>Is this safe to use? Will my account get banned?</AccordionTrigger>
+              <AccordionContent>
+                BlockSky uses Bluesky's official authentication methods (OAuth and App Passwords) and respects their rate limits. We don't do anything that violates Bluesky's terms of service. Blocking accounts is a standard feature that Bluesky provides to all users.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="credentials">
+              <AccordionTrigger>Do you store my password or credentials?</AccordionTrigger>
+              <AccordionContent>
+                No. With OAuth (Quick Login), you authenticate directly with Bluesky - we never see your password. With App Password, the password is sent to Bluesky's servers to create a session, but we don't store it. Session tokens are kept in secure HTTP-only cookies. For App Password users, tokens are only made available to JavaScript temporarily during active blocking operations.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="mutuals">
+              <AccordionTrigger>What are mutuals and why aren't they blocked?</AccordionTrigger>
+              <AccordionContent>
+                Mutuals are accounts that you follow who also follow you back. BlockSky automatically protects these relationships by never blocking your mutuals, even if they follow the account you're targeting.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="undo">
+              <AccordionTrigger>Can I undo or unblock everyone?</AccordionTrigger>
+              <AccordionContent>
+                Currently, BlockSky only handles blocking. To unblock accounts, you'll need to do so through Bluesky directly in your Settings &gt; Moderation &gt; Blocked accounts. We may add bulk unblocking in a future update.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="skipped">
+              <AccordionTrigger>Why are some accounts skipped?</AccordionTrigger>
+              <AccordionContent>
+                Accounts are skipped if they're your mutuals, if you've already blocked them, or if they're official Bluesky accounts (like @bsky.app). This prevents accidentally blocking important accounts.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="closed">
+              <AccordionTrigger>What happens if I close the page while blocking?</AccordionTrigger>
+              <AccordionContent>
+                If you close the page, the blocking process will stop. Any accounts already blocked will remain blocked, but remaining accounts won't be processed. Keep the page open until blocking completes or hits a rate limit pause.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="data">
+              <AccordionTrigger>What data do you collect?</AccordionTrigger>
+              <AccordionContent>
+                We collect minimal anonymous analytics to improve the service. We don't track who you block or store your block list. Your Bluesky profile information is only used during your session and isn't permanently stored.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </div>
     </div>

@@ -10,6 +10,13 @@ const config = defineConfig({
   server: {
     allowedHosts: ['.ngrok-free.app', '.ngrok.io', '.trycloudflare.com'],
   },
+  optimizeDeps: {
+    exclude: [
+      '@tanstack/start-server-core',
+      '@tanstack/react-start',
+      '@tanstack/react-start/server',
+    ],
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -41,6 +48,16 @@ const config = defineConfig({
           route: '/api/block-stream',
           method: 'POST',
           handler: './server/api/block-stream.ts',
+        },
+        {
+          route: '/api/login-app-password',
+          method: 'POST',
+          handler: './server/api/login-app-password.ts',
+        },
+        {
+          route: '/api/oauth-start',
+          method: 'GET',
+          handler: './server/api/oauth-start.ts',
         },
       ],
     }),

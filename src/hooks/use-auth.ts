@@ -65,7 +65,9 @@ export function useAuth() {
     // For now, we'll handle OAuth initiation differently
     // This will be updated when we have the proper OAuth flow
     const baseUrl = window.location.origin
-    window.location.href = `${baseUrl}/auth/login?handle=${encodeURIComponent(handle)}`
+    const loginUrl = `${baseUrl}/auth/login?handle=${encodeURIComponent(handle)}`
+    console.log('[useAuth] Redirecting to:', loginUrl)
+    window.location.href = loginUrl
   }, [])
 
   const logout = useCallback(async () => {
@@ -74,6 +76,7 @@ export function useAuth() {
     document.cookie = 'bsky_handle=; path=/; max-age=0'
     document.cookie = 'bsky_display_name=; path=/; max-age=0'
     document.cookie = 'bsky_avatar=; path=/; max-age=0'
+    document.cookie = 'auth_method=; path=/; max-age=0'
 
     setState({
       isLoading: false,
@@ -82,10 +85,19 @@ export function useAuth() {
     })
   }, [])
 
+  const setUser = useCallback((user: User) => {
+    setState({
+      isLoading: false,
+      isAuthenticated: true,
+      user,
+    })
+  }, [])
+
   return {
     ...state,
     login,
     logout,
+    setUser,
     refresh: checkAuthStatus,
   }
 }

@@ -4,10 +4,9 @@ import { Header } from '@/components/layout/header'
 import { CookieConsentBanner } from '@/components/cookie-consent-banner'
 import { CookiePolicySheet } from '@/components/cookie-policy-sheet'
 import { PrivacyPolicySheet } from '@/components/privacy-policy-sheet'
+import { TermsOfServiceSheet } from '@/components/terms-of-service-sheet'
 import { ThemeProvider } from '@/components/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { RiBlueskyFill } from 'react-icons/ri'
-import { Heart } from 'lucide-react'
 
 import appCss from '../styles.css?url'
 
@@ -95,26 +94,7 @@ function RootComponent() {
               <div className="container mx-auto px-4">
                 <div className="flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
                   <div className="flex gap-4">
-                    <a
-                      href="https://bsky.app/profile/blocksky.app"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 hover:text-blue-500 transition-colors"
-                    >
-                      <RiBlueskyFill className="h-4 w-4" />
-                      @blocksky.app
-                    </a>
-                    <a
-                      href="https://ko-fi.com/blockskyapp"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 hover:text-pink-500 transition-colors"
-                    >
-                      <Heart className="h-4 w-4" />
-                      Support us
-                    </a>
-                  </div>
-                  <div className="flex gap-4">
+                    <TermsOfServiceSheet />
                     <PrivacyPolicySheet />
                     <CookiePolicySheet />
                   </div>

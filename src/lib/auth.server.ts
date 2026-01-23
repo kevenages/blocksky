@@ -172,6 +172,112 @@ export const handleOAuthCallback = createServerFn({ method: 'GET' })
     }
   })
 
+export const loginWithAppPassword = createServerFn({ method: 'POST' })
+  .handler(async ({ data }: { data: { identifier: string; appPassword: string } }) => {
+    console.log('[Server] loginWithAppPassword called with identifier:', data?.identifier)
+
+    // TEMPORARY TEST: Return hardcoded response to test serialization
+    return { success: false, user: null, error: 'Test error response' }
+
+    try {
+      const handle = data?.identifier?.trim() || ''
+      const password = data?.appPassword?.trim() || ''
+
+      if (!handle) {
+        console.log('[Server] Handle is required')
+        return { success: false, user: null, error: 'Handle is required' }
+      }
+      if (!password) {
+        console.log('[Server] Password is required')
+        return { success: false, user: null, error: 'Password is required' }
+      }
+
+      // Login with app password
+      console.log('[Server] Attempting login...')
+      const agent = new Agent({ service: 'https://bsky.social' })
+      await agent.login({ identifier: handle, password })
+      console.log('[Server] Login successful, session:', !!agent.session)
+
+      if (!agent.session) {
+        console.log('[Server] No session after login')
+        return { success: false, user: null, error: 'Login failed - no session' }
+      }
+
+      console.log('[Server] Session data:', { did: agent.session.did, handle: agent.session.handle })
+      const { did, accessJwt, refreshJwt } = agent.session
+      // Use input handle as fallback since session.handle might be undefined
+      const sessionHandle = agent.session.handle || handle
+
+      // Get profile info (with fallback to session data, then input handle)
+      let profileHandle = sessionHandle
+      console.log('[Server] Using profileHandle:', profileHandle)
+      let profileDisplayName = ''
+      let profileAvatar = ''
+
+      try {
+        const profile = await agent.getProfile({ actor: did })
+        if (profile?.data) {
+          profileHandle = profile.data.handle || profileHandle
+          profileDisplayName = profile.data.displayName || ''
+          profileAvatar = profile.data.avatar || ''
+        }
+      } catch (profileError) {
+        // Profile fetch failed, use session handle
+        logger.warn('Failed to fetch profile, using session data', { action: 'login_app_password', did })
+      }
+
+      // Set auth cookies (same as OAuth)
+      setAuthCookies({
+        did,
+        handle: profileHandle,
+        displayName: profileDisplayName,
+        avatar: profileAvatar,
+      })
+
+      // Set auth method cookie
+      setCookie('auth_method', 'app_password', {
+        httpOnly: true,
+        secure: IS_PRODUCTION,
+        sameSite: 'strict',
+        maxAge: COOKIE_MAX_AGE,
+        path: '/',
+      })
+
+      // Store session tokens for app password auth (httpOnly for security)
+      setCookie('bsky_access_jwt', accessJwt, {
+        httpOnly: true,
+        secure: IS_PRODUCTION,
+        sameSite: 'strict',
+        maxAge: COOKIE_MAX_AGE,
+        path: '/',
+      })
+
+      setCookie('bsky_refresh_jwt', refreshJwt, {
+        httpOnly: true,
+        secure: IS_PRODUCTION,
+        sameSite: 'strict',
+        maxAge: COOKIE_MAX_AGE,
+        path: '/',
+      })
+
+      logger.info('User logged in with app password', { action: 'login_app_password', userId: did, userHandle: profileHandle })
+
+      const user = {
+        did: String(did),
+        handle: String(profileHandle),
+        displayName: String(profileDisplayName),
+        avatar: String(profileAvatar),
+      }
+      console.log('[Server] Returning success result with user:', user)
+      return { success: true, user, error: null }
+    } catch (error) {
+      console.log('[Server] Login error caught:', error)
+      logger.error('App password login failed', error, { action: 'login_app_password' })
+      const errorMessage = isErrorWithStatus(error) && error.message ? error.message : 'Login failed'
+      return { success: false, user: null, error: errorMessage }
+    }
+  })
+
 export const searchProfiles = createServerFn({ method: 'GET' })
   .inputValidator((data: { query: string }) => data)
   .handler(async ({ data }) => {
@@ -242,7 +348,7 @@ export const getFollowers = createServerFn({ method: 'GET' })
   .inputValidator((data: { targetDid: string; cursor?: string }) => data)
   .handler(async ({ data }) => {
     try {
-      // Get authenticated user from httpOnly cookie - prevents DID spoofing
+      // Still require auth to confirm user is logged in
       const userDid = getAuthenticatedDid()
       if (!userDid) {
         return { success: false, followers: [], cursor: undefined, error: 'Not authenticated' }
@@ -253,14 +359,10 @@ export const getFollowers = createServerFn({ method: 'GET' })
         return { success: false, followers: [], cursor: undefined, error: 'Invalid target DID' }
       }
 
-      // Use authenticated API - uses user's rate limit and auto-filters already-blocked users
-      const { getOAuthClient } = await import('./oauth')
-      const client = await getOAuthClient()
+      // Use public API - follower lists are public, saves user's rate limit for blocking
+      const publicAgent = new Agent({ service: 'https://public.api.bsky.app' })
 
-      const session = await client.restore(userDid)
-      const agent = new Agent(session)
-
-      const result = await agent.getFollowers({
+      const result = await publicAgent.getFollowers({
         actor: data.targetDid,
         limit: 100,
         cursor: data.cursor,
@@ -286,7 +388,7 @@ export const getFollowing = createServerFn({ method: 'GET' })
   .inputValidator((data: { targetDid: string; cursor?: string }) => data)
   .handler(async ({ data }) => {
     try {
-      // Get authenticated user from httpOnly cookie - prevents DID spoofing
+      // Still require auth to confirm user is logged in
       const userDid = getAuthenticatedDid()
       if (!userDid) {
         return { success: false, following: [], cursor: undefined, error: 'Not authenticated' }
@@ -297,14 +399,10 @@ export const getFollowing = createServerFn({ method: 'GET' })
         return { success: false, following: [], cursor: undefined, error: 'Invalid target DID' }
       }
 
-      // Use authenticated API - uses user's rate limit and auto-filters already-blocked users
-      const { getOAuthClient } = await import('./oauth')
-      const client = await getOAuthClient()
+      // Use public API - following lists are public, saves user's rate limit for blocking
+      const publicAgent = new Agent({ service: 'https://public.api.bsky.app' })
 
-      const session = await client.restore(userDid)
-      const agent = new Agent(session)
-
-      const result = await agent.getFollows({
+      const result = await publicAgent.getFollows({
         actor: data.targetDid,
         limit: 100,
         cursor: data.cursor,

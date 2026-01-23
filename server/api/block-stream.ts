@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody, createEventStream, getCookie } from 'h3'
-import { Agent } from '@atproto/api'
+import { Agent, AtpAgent } from '@atproto/api'
 import { XRPCError } from '@atproto/xrpc'
 
 const DID_REGEX = /^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$/
@@ -45,9 +45,13 @@ function sanitizeResetTimestamp(headerValue: string | undefined): number {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export default defineEventHandler(async (event) => {
+  console.log('[block-stream] Starting...')
+
   // Get authenticated user from cookie
   const userDid = getCookie(event, 'bsky_did')
+  console.log('[block-stream] userDid:', userDid)
   if (!userDid || !isValidDid(userDid)) {
+    console.log('[block-stream] Not authenticated')
     return { error: 'Not authenticated' }
   }
 
@@ -70,11 +74,45 @@ export default defineEventHandler(async (event) => {
     return { error: `Invalid DIDs: ${invalidDids.length}` }
   }
 
-  // Get OAuth session and create agent
-  const { getOAuthClient } = await import('../../src/lib/oauth')
-  const client = await getOAuthClient()
-  const session = await client.restore(userDid)
-  const agent = new Agent(session)
+  // Create agent based on auth method
+  let agent: Agent | AtpAgent
+  const authMethod = getCookie(event, 'auth_method')
+  console.log('[block-stream] authMethod:', authMethod)
+
+  try {
+    if (authMethod === 'app_password') {
+      // Use stored session tokens for app password auth
+      const accessJwt = getCookie(event, 'bsky_access_jwt')
+      const refreshJwt = getCookie(event, 'bsky_refresh_jwt')
+      console.log('[block-stream] App password auth, has tokens:', !!accessJwt, !!refreshJwt)
+
+      if (!accessJwt || !refreshJwt) {
+        return { error: 'Session expired. Please log in again.' }
+      }
+
+      const atpAgent = new AtpAgent({ service: 'https://bsky.social' })
+      await atpAgent.resumeSession({
+        did: userDid,
+        handle: getCookie(event, 'bsky_handle') || '',
+        accessJwt,
+        refreshJwt,
+        active: true,
+      })
+      agent = atpAgent
+      console.log('[block-stream] App password agent created')
+    } else {
+      // Default to OAuth
+      console.log('[block-stream] OAuth auth')
+      const { getOAuthClient } = await import('../../src/lib/oauth')
+      const client = await getOAuthClient()
+      const session = await client.restore(userDid)
+      agent = new Agent(session)
+      console.log('[block-stream] OAuth agent created')
+    }
+  } catch (authError) {
+    console.error('[block-stream] Auth error:', authError)
+    return { error: 'Failed to authenticate. Please log in again.' }
+  }
 
   // Create event stream
   const eventStream = createEventStream(event)
@@ -152,8 +190,8 @@ export default defineEventHandler(async (event) => {
           total,
         }))
 
-        // Small delay between blocks
-        await sleep(25)
+        // Minimal delay - we'll hit rate limit at 1,666 regardless of speed
+        await sleep(5)
       }
 
       // Send completion

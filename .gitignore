@@ -37,6 +37,7 @@ todos.json
 .cta.json
 .claude
 CLAUDE.md
+CLAUDE.local.md
 
 # Cloudflare
 .wrangler
