@@ -59,6 +59,11 @@ const config = defineConfig({
           method: 'GET',
           handler: './server/api/oauth-start.ts',
         },
+        {
+          route: '/api/get-blocking-tokens',
+          method: 'GET',
+          handler: './server/api/get-blocking-tokens.ts',
+        },
       ],
     }),
     tailwindcss(),
