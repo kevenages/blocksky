@@ -30,6 +30,10 @@ export const Route = createRootRoute({
     ],
     links: [
       {
+        rel: 'canonical',
+        href: 'https://blocksky.app/',
+      },
+      {
         rel: 'preload',
         href: appCss,
         as: 'style',

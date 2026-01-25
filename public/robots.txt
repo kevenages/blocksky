@@ -1,3 +1,10 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Disallow: /auth/
+Disallow: /api/
+
+# Allow main pages
+Allow: /
+
+# Sitemap
+Sitemap: https://blocksky.app/sitemap.xml
