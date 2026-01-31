@@ -551,9 +551,12 @@ function HomePage() {
         setBlockingState((prev) => ({
           ...prev,
           isBlocking: false,
-          current: `No ${type} to block`,
+          blocked: 0,
+          current: `No new ${type} to block`,
+          completedTypes: prev.completedTypes.includes(type)
+            ? prev.completedTypes
+            : [...prev.completedTypes, type],
         }))
-        toast.info(`No new ${type} to block! (${skippedMutuals.toLocaleString()} mutuals, ${skippedBlocked.toLocaleString()} already blocked)`)
         return
       }
 
@@ -899,14 +902,29 @@ function HomePage() {
                     )}
 
                     {!blockingState.isBlocking && (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
+                        {/* Summary */}
+                        <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                          <div className="flex flex-wrap gap-4 text-sm justify-center">
+                            <span className="text-green-600 font-medium">
+                              {blockingState.blocked.toLocaleString()} blocked
+                            </span>
+                            <span className="text-blue-600">
+                              {blockingState.skippedMutuals.toLocaleString()} mutuals protected
+                            </span>
+                            <span className="text-muted-foreground">
+                              {blockingState.skippedBlocked.toLocaleString()} already blocked
+                            </span>
+                          </div>
+                        </div>
+
                         {/* Show which types have been completed */}
-                        <div className="flex flex-wrap gap-2 text-sm">
+                        <div className="flex flex-wrap gap-2 text-sm justify-center">
                           {blockingState.completedTypes.includes('followers') && (
-                            <span className="text-green-600">✓ Followers blocked</span>
+                            <span className="text-green-600">✓ Followers done</span>
                           )}
                           {blockingState.completedTypes.includes('following') && (
-                            <span className="text-green-600">✓ Following blocked</span>
+                            <span className="text-green-600">✓ Following done</span>
                           )}
                         </div>
 
