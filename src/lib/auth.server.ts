@@ -482,11 +482,38 @@ export const getBlockedDids = createServerFn({ method: 'GET' })
         return { success: false, blockedDids: [], error: 'Not authenticated' }
       }
 
-      const { getOAuthClient } = await import('./oauth')
-      const client = await getOAuthClient()
+      const authMethod = getCookie('auth_method')
 
-      const session = await client.restore(userDid)
-      const agent = new Agent(session)
+      // Create appropriate agent based on auth method
+      const getAgent = async () => {
+        if (authMethod === 'app_password') {
+          // App Password auth - use stored JWT tokens
+          const accessJwt = getCookie('bsky_access_jwt')
+          const refreshJwt = getCookie('bsky_refresh_jwt')
+
+          if (!accessJwt || !refreshJwt) {
+            throw new Error('Session expired. Please log in again.')
+          }
+
+          const atpAgent = new AtpAgent({ service: 'https://bsky.social' })
+          await atpAgent.resumeSession({
+            did: userDid,
+            handle: '', // Not needed for getBlocks
+            accessJwt,
+            refreshJwt,
+            active: true,
+          })
+          return atpAgent
+        } else {
+          // OAuth auth - use OAuth session
+          const { getOAuthClient } = await import('./oauth')
+          const client = await getOAuthClient()
+          const session = await client.restore(userDid)
+          return new Agent(session)
+        }
+      }
+
+      const agent = await getAgent()
 
       const blockedDids = new Set<string>()
       let cursor: string | undefined
