@@ -7,7 +7,7 @@ import { Users, Zap, Lock, X, Loader2, Heart, Clock, Wand2, MessageSquare } from
 import { useAuth } from '@/hooks/use-auth'
 import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
-import { getProfile, getFollowers, getFollowing, getMutuals } from '@/lib/auth.server'
+import { getProfile, getFollowers, getFollowing, getMutuals, getBlockedDids } from '@/lib/auth.server'
 import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
 import { blockUsersClientSide, getBlockingTokens } from '@/lib/client-blocker'
@@ -140,6 +140,9 @@ function HomePage() {
 
   // Cache for mutuals - only fetch once per session
   const mutualDidsCache = useRef<Set<string> | null>(null)
+
+  // Cache for already-blocked DIDs - only fetch once per session
+  const blockedDidsCache = useRef<Set<string> | null>(null)
 
   // Store pending DIDs for auto-resume after rate limit
   const pendingDidsRef = useRef<string[]>([])
@@ -441,20 +444,27 @@ function HomePage() {
       total: 0,
       blocked: 0,
       skipped: 0,
-      current: mutualDidsCache.current ? `Fetching ${type}...` : 'Fetching your mutuals...',
+      current: (mutualDidsCache.current && blockedDidsCache.current) ? `Fetching ${type}...` : 'Fetching your mutuals and blocked accounts...',
     }))
 
     try {
-      // Use cached mutuals if available, otherwise fetch
-      // Note: We don't need to fetch blocked users - the authenticated API
-      // for getFollowers/getFollowing already filters them out automatically
-      if (!mutualDidsCache.current) {
-        const mutualsResult = await getMutuals({ data: {} })
+      // Fetch mutuals and blocked DIDs in parallel if not cached
+      if (!mutualDidsCache.current || !blockedDidsCache.current) {
+        const [mutualsResult, blockedResult] = await Promise.all([
+          mutualDidsCache.current ? Promise.resolve({ mutualDids: [...mutualDidsCache.current] }) : getMutuals({ data: {} }),
+          blockedDidsCache.current ? Promise.resolve({ blockedDids: [...blockedDidsCache.current] }) : getBlockedDids({ data: {} }),
+        ])
         if (!mountedRef.current) return
-        mutualDidsCache.current = new Set(mutualsResult.mutualDids || [])
+        if (!mutualDidsCache.current) {
+          mutualDidsCache.current = new Set(mutualsResult.mutualDids || [])
+        }
+        if (!blockedDidsCache.current) {
+          blockedDidsCache.current = new Set(blockedResult.blockedDids || [])
+        }
       }
 
       const mutualDids = mutualDidsCache.current
+      const blockedDids = blockedDidsCache.current
 
       if (!mountedRef.current) return
       setBlockingState((prev) => ({
@@ -492,11 +502,11 @@ function HomePage() {
 
       if (!mountedRef.current) return
 
-      // Filter out mutuals, self, and whitelisted
-      // Note: Already blocked users are automatically filtered by the authenticated API
+      // Filter out mutuals, self, whitelisted, and already-blocked
       const toBlock = allUsers.filter(
         (u) =>
           !mutualDids.has(u.did) &&
+          !blockedDids.has(u.did) &&
           u.handle !== user.handle &&
           !isWhitelisted(u.handle)
       )
