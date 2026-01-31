@@ -326,6 +326,11 @@ function HomePage() {
               pendingDidsRef.current = []
               blockingTypeRef.current = null
 
+              // Add blocked DIDs to cache to prevent re-blocking (Bluesky API has eventual consistency)
+              if (blockedDidsCache.current) {
+                targetDids.forEach(did => blockedDidsCache.current!.add(did))
+              }
+
               setBlockingState((prev) => {
                 const mutualsCount = skipCounts?.mutuals ?? prev.skippedMutuals
                 const blockedCount = skipCounts?.blocked ?? prev.skippedBlocked
@@ -406,6 +411,11 @@ function HomePage() {
             tempTokensRef.current = null
             pendingDidsRef.current = []
             blockingTypeRef.current = null
+
+            // Add blocked DIDs to cache to prevent re-blocking
+            if (blockedDidsCache.current) {
+              remainingDids.forEach(did => blockedDidsCache.current!.add(did))
+            }
 
             setBlockingState((prev) => {
               toast.success(`Blocked ${(currentBlocked + progress.blocked).toLocaleString()} ${type} total! (${prev.skippedMutuals.toLocaleString()} mutuals protected, ${prev.skippedBlocked.toLocaleString()} already blocked)`)
@@ -496,13 +506,31 @@ function HomePage() {
         if (type === 'followers') {
           const result = await getFollowers({ data: { targetDid: selectedProfile.did, cursor } })
           if (!mountedRef.current) return
-          if (!result.success) break
+          if (!result.success) {
+            console.error('Failed to fetch followers:', result.error)
+            if (allUsers.length === 0) {
+              toast.error('Failed to fetch followers. Please try again.')
+              setBlockingState((prev) => ({ ...prev, isBlocking: false, current: 'Error fetching followers' }))
+              return
+            }
+            // Continue with what we have if we got some
+            break
+          }
           allUsers.push(...result.followers)
           cursor = result.cursor
         } else {
           const result = await getFollowing({ data: { targetDid: selectedProfile.did, cursor } })
           if (!mountedRef.current) return
-          if (!result.success) break
+          if (!result.success) {
+            console.error('Failed to fetch following:', result.error)
+            if (allUsers.length === 0) {
+              toast.error('Failed to fetch following. Please try again.')
+              setBlockingState((prev) => ({ ...prev, isBlocking: false, current: 'Error fetching following' }))
+              return
+            }
+            // Continue with what we have if we got some
+            break
+          }
           allUsers.push(...result.following)
           cursor = result.cursor
         }
@@ -627,6 +655,11 @@ function HomePage() {
             tempTokensRef.current = null
             pendingDidsRef.current = []
             blockingTypeRef.current = null
+
+            // Add blocked DIDs to cache to prevent re-blocking (Bluesky API has eventual consistency)
+            if (blockedDidsCache.current) {
+              targetDids.forEach(did => blockedDidsCache.current!.add(did))
+            }
 
             setBlockingState((prev) => ({
               ...prev,
