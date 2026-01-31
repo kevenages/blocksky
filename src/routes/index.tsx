@@ -252,7 +252,7 @@ function HomePage() {
   }
 
   // Stream blocks to the server and handle responses
-  const streamBlocks = async (targetDids: string[], type: 'followers' | 'following', baseBlocked: number = 0) => {
+  const streamBlocks = async (targetDids: string[], type: 'followers' | 'following', baseBlocked: number = 0, skipCounts?: { mutuals: number; blocked: number }) => {
     // Create new AbortController for this operation
     abortControllerRef.current?.abort()
     abortControllerRef.current = new AbortController()
@@ -327,11 +327,15 @@ function HomePage() {
               blockingTypeRef.current = null
 
               setBlockingState((prev) => {
-                toast.success(`Blocked ${(baseBlocked + data.blocked).toLocaleString()} ${type}! (${prev.skippedMutuals.toLocaleString()} mutuals protected, ${prev.skippedBlocked.toLocaleString()} already blocked)`)
+                const mutualsCount = skipCounts?.mutuals ?? prev.skippedMutuals
+                const blockedCount = skipCounts?.blocked ?? prev.skippedBlocked
+                toast.success(`Blocked ${(baseBlocked + data.blocked).toLocaleString()} ${type}! (${mutualsCount.toLocaleString()} mutuals protected, ${blockedCount.toLocaleString()} already blocked)`)
                 return {
                   ...prev,
                   isBlocking: false,
                   blocked: baseBlocked + data.blocked,
+                  skippedMutuals: mutualsCount,
+                  skippedBlocked: blockedCount,
                   sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
                   current: 'Complete!',
                   completedTypes: prev.completedTypes.includes(type)
@@ -647,7 +651,7 @@ function HomePage() {
         })
       } else {
         // Use server-side blocking for OAuth users
-        await streamBlocks(targetDids, type)
+        await streamBlocks(targetDids, type, 0, { mutuals: skippedMutuals, blocked: skippedBlocked })
       }
     } catch (error) {
       // Ignore abort errors (user navigated away or started new operation)
