@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   console.log('[Server] login-app-password endpoint called')
 
   try {
-    const body = await readBody(event)
+    const body = await readBody<{ identifier?: string; appPassword?: string }>(event)
     console.log('[Server] Body received:', { identifier: body?.identifier })
 
     const identifier = body?.identifier?.trim() || ''

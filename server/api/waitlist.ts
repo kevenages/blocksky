@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody } from 'h3'
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
+import { initializeApp, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

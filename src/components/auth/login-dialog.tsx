@@ -163,7 +163,7 @@ export function LoginDialog({ trigger }: LoginDialogProps) {
                 type="submit"
                 className="w-full"
                 disabled={isLoading}
-                onClick={(e) => {
+                onClick={() => {
                   console.log('[OAuth] Button clicked')
                   // Don't prevent default - let form submit handle it
                 }}

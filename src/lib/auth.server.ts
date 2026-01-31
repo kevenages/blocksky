@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { Agent } from '@atproto/api'
+import { Agent, AtpAgent } from '@atproto/api'
 import { setCookie, getCookie } from '@tanstack/start-server-core'
 import { logger } from './logger'
 
@@ -173,44 +173,33 @@ export const handleOAuthCallback = createServerFn({ method: 'GET' })
   })
 
 export const loginWithAppPassword = createServerFn({ method: 'POST' })
-  .handler(async ({ data }: { data: { identifier: string; appPassword: string } }) => {
-    console.log('[Server] loginWithAppPassword called with identifier:', data?.identifier)
-
-    // TEMPORARY TEST: Return hardcoded response to test serialization
-    return { success: false, user: null, error: 'Test error response' }
-
+  .inputValidator((data: { identifier: string; appPassword: string }) => data)
+  .handler(async ({ data }) => {
     try {
       const handle = data?.identifier?.trim() || ''
       const password = data?.appPassword?.trim() || ''
 
       if (!handle) {
-        console.log('[Server] Handle is required')
         return { success: false, user: null, error: 'Handle is required' }
       }
       if (!password) {
-        console.log('[Server] Password is required')
         return { success: false, user: null, error: 'Password is required' }
       }
 
-      // Login with app password
-      console.log('[Server] Attempting login...')
-      const agent = new Agent({ service: 'https://bsky.social' })
+      // Login with app password - use AtpAgent for password auth
+      const agent = new AtpAgent({ service: 'https://bsky.social' })
       await agent.login({ identifier: handle, password })
-      console.log('[Server] Login successful, session:', !!agent.session)
 
       if (!agent.session) {
-        console.log('[Server] No session after login')
         return { success: false, user: null, error: 'Login failed - no session' }
       }
 
-      console.log('[Server] Session data:', { did: agent.session.did, handle: agent.session.handle })
       const { did, accessJwt, refreshJwt } = agent.session
       // Use input handle as fallback since session.handle might be undefined
       const sessionHandle = agent.session.handle || handle
 
       // Get profile info (with fallback to session data, then input handle)
       let profileHandle = sessionHandle
-      console.log('[Server] Using profileHandle:', profileHandle)
       let profileDisplayName = ''
       let profileAvatar = ''
 
@@ -268,10 +257,8 @@ export const loginWithAppPassword = createServerFn({ method: 'POST' })
         displayName: String(profileDisplayName),
         avatar: String(profileAvatar),
       }
-      console.log('[Server] Returning success result with user:', user)
       return { success: true, user, error: null }
     } catch (error) {
-      console.log('[Server] Login error caught:', error)
       logger.error('App password login failed', error, { action: 'login_app_password' })
       const errorMessage = isErrorWithStatus(error) && error.message ? error.message : 'Login failed'
       return { success: false, user: null, error: errorMessage }

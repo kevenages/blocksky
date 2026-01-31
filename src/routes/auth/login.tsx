@@ -13,7 +13,7 @@ export const Route = createFileRoute('/auth/login')({
 
     if (!handle) {
       console.log('[OAuth Login] No handle, redirecting to /')
-      throw redirect({ to: '/' })
+      throw redirect({ to: '/', search: { error: undefined } })
     }
 
     try {

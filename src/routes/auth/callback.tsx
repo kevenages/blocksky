@@ -29,7 +29,7 @@ export const Route = createFileRoute('/auth/callback')({
 
       if (result.success) {
         // Redirect immediately to prevent client-side re-execution
-        throw redirect({ to: '/' })
+        throw redirect({ to: '/', search: { error: undefined } })
       }
 
       return result

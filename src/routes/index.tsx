@@ -10,7 +10,6 @@ import { ProfileSearch } from '@/components/profile-search'
 import { getProfile, getFollowers, getFollowing, getMutuals } from '@/lib/auth.server'
 import { toast } from 'sonner'
 import { Progress } from '@/components/ui/progress'
-import { Input } from '@/components/ui/input'
 import { blockUsersClientSide, getBlockingTokens } from '@/lib/client-blocker'
 import {
   Accordion,
@@ -99,7 +98,7 @@ function HomePage() {
       const message = errorMessages[error] || 'An error occurred. Please try again.'
       toast.error(message)
       // Clear the error from URL
-      navigate({ to: '/', search: {}, replace: true })
+      navigate({ to: '/', search: { error: undefined }, replace: true })
     }
   }, [error, navigate])
 
