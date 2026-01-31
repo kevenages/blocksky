@@ -61,6 +61,8 @@ interface BlockingState {
   total: number
   blocked: number
   skipped: number
+  skippedMutuals: number
+  skippedBlocked: number
   current: string
   completedTypes: Array<'followers' | 'following'>
   rateLimitedUntil: number | null
@@ -80,6 +82,8 @@ function HomePage() {
     total: 0,
     blocked: 0,
     skipped: 0,
+    skippedMutuals: 0,
+    skippedBlocked: 0,
     current: '',
     completedTypes: [],
     rateLimitedUntil: null,
@@ -192,6 +196,8 @@ function HomePage() {
       total: 0,
       blocked: 0,
       skipped: 0,
+      skippedMutuals: 0,
+      skippedBlocked: 0,
       current: '',
       completedTypes: [],
       rateLimitedUntil: null,
@@ -320,17 +326,19 @@ function HomePage() {
               pendingDidsRef.current = []
               blockingTypeRef.current = null
 
-              setBlockingState((prev) => ({
-                ...prev,
-                isBlocking: false,
-                blocked: baseBlocked + data.blocked,
-                sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
-                current: 'Complete!',
-                completedTypes: prev.completedTypes.includes(type)
-                  ? prev.completedTypes
-                  : [...prev.completedTypes, type],
-              }))
-              toast.success(`Blocked ${(baseBlocked + data.blocked).toLocaleString()} users!`)
+              setBlockingState((prev) => {
+                toast.success(`Blocked ${(baseBlocked + data.blocked).toLocaleString()} ${type}! (${prev.skippedMutuals.toLocaleString()} mutuals protected, ${prev.skippedBlocked.toLocaleString()} already blocked)`)
+                return {
+                  ...prev,
+                  isBlocking: false,
+                  blocked: baseBlocked + data.blocked,
+                  sessionBlocks: prev.sessionBlocks + (baseBlocked + data.blocked - prev.blocked),
+                  current: 'Complete!',
+                  completedTypes: prev.completedTypes.includes(type)
+                    ? prev.completedTypes
+                    : [...prev.completedTypes, type],
+                }
+              })
               return
             } else if (data.type === 'error') {
               throw new Error(data.message || 'Unknown error')
@@ -395,17 +403,19 @@ function HomePage() {
             pendingDidsRef.current = []
             blockingTypeRef.current = null
 
-            setBlockingState((prev) => ({
-              ...prev,
-              isBlocking: false,
-              blocked: currentBlocked + progress.blocked,
-              sessionBlocks: prev.sessionBlocks + (currentBlocked + progress.blocked - prev.blocked),
-              current: 'Complete!',
-              completedTypes: prev.completedTypes.includes(type)
-                ? prev.completedTypes
-                : [...prev.completedTypes, type],
-            }))
-            toast.success(`Blocked ${(currentBlocked + progress.blocked).toLocaleString()} users total!`)
+            setBlockingState((prev) => {
+              toast.success(`Blocked ${(currentBlocked + progress.blocked).toLocaleString()} ${type} total! (${prev.skippedMutuals.toLocaleString()} mutuals protected, ${prev.skippedBlocked.toLocaleString()} already blocked)`)
+              return {
+                ...prev,
+                isBlocking: false,
+                blocked: currentBlocked + progress.blocked,
+                sessionBlocks: prev.sessionBlocks + (currentBlocked + progress.blocked - prev.blocked),
+                current: 'Complete!',
+                completedTypes: prev.completedTypes.includes(type)
+                  ? prev.completedTypes
+                  : [...prev.completedTypes, type],
+              }
+            })
           } else if (progress.type === 'error') {
             tempTokensRef.current = null
             toast.error(progress.error || 'An error occurred while resuming')
@@ -502,23 +512,38 @@ function HomePage() {
 
       if (!mountedRef.current) return
 
-      // Filter out mutuals, self, whitelisted, and already-blocked
-      const toBlock = allUsers.filter(
-        (u) =>
-          !mutualDids.has(u.did) &&
-          !blockedDids.has(u.did) &&
-          u.handle !== user.handle &&
-          !isWhitelisted(u.handle)
-      )
+      // Count skipped by reason
+      let skippedMutuals = 0
+      let skippedBlocked = 0
+      let skippedOther = 0 // self + whitelisted
 
-      const skippedCount = allUsers.length - toBlock.length
+      // Filter out mutuals, self, whitelisted, and already-blocked
+      const toBlock = allUsers.filter((u) => {
+        if (mutualDids.has(u.did)) {
+          skippedMutuals++
+          return false
+        }
+        if (blockedDids.has(u.did)) {
+          skippedBlocked++
+          return false
+        }
+        if (u.handle === user.handle || isWhitelisted(u.handle)) {
+          skippedOther++
+          return false
+        }
+        return true
+      })
+
+      const skippedCount = skippedMutuals + skippedBlocked + skippedOther
 
       if (!mountedRef.current) return
       setBlockingState((prev) => ({
         ...prev,
         total: toBlock.length,
         skipped: skippedCount,
-        current: `Blocking ${toBlock.length} users (${skippedCount} skipped)...`,
+        skippedMutuals,
+        skippedBlocked,
+        current: `Blocking ${toBlock.length.toLocaleString()} users (${skippedCount.toLocaleString()} skipped)...`,
       }))
 
       if (toBlock.length === 0) {
@@ -526,9 +551,9 @@ function HomePage() {
         setBlockingState((prev) => ({
           ...prev,
           isBlocking: false,
-          current: `No ${type} to block (${skippedCount} skipped - mutuals or already blocked)`,
+          current: `No ${type} to block`,
         }))
-        toast.info(`No new ${type} to block!`)
+        toast.info(`No new ${type} to block! (${skippedMutuals.toLocaleString()} mutuals, ${skippedBlocked.toLocaleString()} already blocked)`)
         return
       }
 
@@ -606,7 +631,7 @@ function HomePage() {
                 ? prev.completedTypes
                 : [...prev.completedTypes, type],
             }))
-            toast.success(`Blocked ${progress.blocked.toLocaleString()} users!`)
+            toast.success(`Blocked ${progress.blocked.toLocaleString()} ${type}! (${skippedMutuals.toLocaleString()} mutuals protected, ${skippedBlocked.toLocaleString()} already blocked)`)
           } else if (progress.type === 'error') {
             tempTokensRef.current = null
             toast.error(progress.error || 'An error occurred while blocking')
