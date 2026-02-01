@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN rm -rf .output && npm run build && \
     grep -o "styles-[A-Za-z0-9]*\.css" .output/server/index.mjs | head -1
 
 # Production stage
-FROM node:22-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
