@@ -334,7 +334,8 @@ function HomePage() {
               setBlockingState((prev) => {
                 const mutualsCount = skipCounts?.mutuals ?? prev.skippedMutuals
                 const blockedCount = skipCounts?.blocked ?? prev.skippedBlocked
-                toast.success(`Blocked ${(baseBlocked + data.blocked).toLocaleString()} ${type}! (${mutualsCount.toLocaleString()} mutuals protected, ${blockedCount.toLocaleString()} already blocked)`)
+                // Dopamine hit - celebratory toast!
+                toast.success(`Done! Blocked ${(baseBlocked + data.blocked).toLocaleString()} ${type}`)
                 return {
                   ...prev,
                   isBlocking: false,
@@ -418,7 +419,8 @@ function HomePage() {
             }
 
             setBlockingState((prev) => {
-              toast.success(`Blocked ${(currentBlocked + progress.blocked).toLocaleString()} ${type} total! (${prev.skippedMutuals.toLocaleString()} mutuals protected, ${prev.skippedBlocked.toLocaleString()} already blocked)`)
+              // Dopamine hit - celebratory toast!
+              toast.success(`Done! Blocked ${(currentBlocked + progress.blocked).toLocaleString()} ${type} total`)
               return {
                 ...prev,
                 isBlocking: false,
@@ -671,7 +673,8 @@ function HomePage() {
                 ? prev.completedTypes
                 : [...prev.completedTypes, type],
             }))
-            toast.success(`Blocked ${progress.blocked.toLocaleString()} ${type}! (${skippedMutuals.toLocaleString()} mutuals protected, ${skippedBlocked.toLocaleString()} already blocked)`)
+            // Dopamine hit - celebratory toast!
+            toast.success(`Done! Blocked ${progress.blocked.toLocaleString()} ${type}`)
           } else if (progress.type === 'error') {
             tempTokensRef.current = null
             toast.error(progress.error || 'An error occurred while blocking')
@@ -940,29 +943,17 @@ function HomePage() {
 
                     {!blockingState.isBlocking && (
                       <div className="space-y-3">
-                        {/* Summary */}
-                        <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-                          <div className="flex flex-wrap gap-4 text-sm justify-center">
-                            <span className="text-green-600 font-medium">
-                              {blockingState.blocked.toLocaleString()} blocked
-                            </span>
-                            <span className="text-blue-600">
-                              {blockingState.skippedMutuals.toLocaleString()} mutuals protected
-                            </span>
-                            <span className="text-muted-foreground">
-                              {blockingState.skippedBlocked.toLocaleString()} already blocked
-                            </span>
+                        {/* Summary - stacked vertically */}
+                        <div className="bg-muted/30 rounded-lg p-4 space-y-1 text-sm">
+                          <div className={blockingState.blocked > 0 ? 'text-green-600 font-semibold' : 'text-muted-foreground/70'}>
+                            {blockingState.blocked.toLocaleString()} blocked
                           </div>
-                        </div>
-
-                        {/* Show which types have been completed */}
-                        <div className="flex flex-wrap gap-2 text-sm justify-center">
-                          {blockingState.completedTypes.includes('followers') && (
-                            <span className="text-green-600">✓ Followers done</span>
-                          )}
-                          {blockingState.completedTypes.includes('following') && (
-                            <span className="text-green-600">✓ Following done</span>
-                          )}
+                          <div className={blockingState.skippedMutuals > 0 ? 'text-blue-600 font-semibold' : 'text-muted-foreground/70'}>
+                            {blockingState.skippedMutuals.toLocaleString()} mutuals protected
+                          </div>
+                          <div className={blockingState.skippedBlocked > 0 ? 'text-foreground font-semibold' : 'text-muted-foreground/70'}>
+                            {blockingState.skippedBlocked.toLocaleString()} already blocked
+                          </div>
                         </div>
 
                         {/* Show buttons for remaining types */}
