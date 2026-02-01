@@ -1,6 +1,5 @@
 # Build stage
-# Cache bust: 2026-02-01-v2
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -13,14 +12,14 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Cache bust arg - change this value to force rebuild
-ARG CACHEBUST=2026-02-01-v3
-
-# Build the application (skip prebuild for OAuth, we generate at runtime)
-RUN echo "Build: $CACHEBUST" && npm run build
+# Force fresh build
+RUN rm -rf .output && npm run build && \
+    echo "=== BUILD OUTPUT ===" && \
+    ls -la .output/public/assets/*.css && \
+    grep -o "styles-[A-Za-z0-9]*\.css" .output/server/index.mjs | head -1
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -34,6 +33,11 @@ COPY --from=builder /app/public ./public
 
 # Copy node_modules for externalized packages (firebase-admin, grpc, etc.)
 COPY --from=builder /app/node_modules ./node_modules
+
+# Debug: verify assets match
+RUN echo "=== RUNNER STAGE ===" && \
+    ls -la .output/public/assets/*.css && \
+    grep -o "styles-[A-Za-z0-9]*\.css" .output/server/index.mjs | head -1
 
 # Set ownership
 RUN chown -R blocksky:nodejs /app

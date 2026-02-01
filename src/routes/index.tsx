@@ -1162,18 +1162,25 @@ function HomePage() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="speed">
-              <AccordionTrigger>Why does blocking take so long?</AccordionTrigger>
-              <AccordionContent>
-                Bluesky limits how fast you can perform actions like blocking through their API. This rate limit is enforced by Bluesky, not BlockSky. If you hit the limit, BlockSky will automatically pause and resume when the limit resets.
-              </AccordionContent>
-            </AccordionItem>
-
             <AccordionItem value="login-methods">
               <AccordionTrigger>What's the difference between Quick Login and App Password?</AccordionTrigger>
               <AccordionContent>
                 <p className="mb-2"><strong>App Password</strong> is the fastest option. Blocking requests go directly from your browser to Bluesky, just like the original BlockSky. The tradeoff is slightly reduced security - session tokens are temporarily accessible to JavaScript during blocking. You can revoke app passwords anytime in Bluesky Settings → Privacy → App Passwords.</p>
                 <p><strong>Quick Login (OAuth)</strong> is the most secure option. Your credentials never touch BlockSky - you authenticate directly with Bluesky. Blocking runs through our server, which may hit rate limits sooner due to shared infrastructure.</p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="app-password-speed">
+              <AccordionTrigger>Why is App Password faster than Quick Login?</AccordionTrigger>
+              <AccordionContent>
+                With App Password, blocking runs directly in your browser - requests go straight to Bluesky without passing through our servers. This is the same approach the original BlockSky used. Quick Login (OAuth) routes requests through our server for enhanced security, which can hit Bluesky's rate limits sooner.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="rate-limits">
+              <AccordionTrigger>What are rate limits?</AccordionTrigger>
+              <AccordionContent>
+                Bluesky limits how quickly you can perform actions like blocking. This is a platform-wide protection, not something BlockSky controls. If you hit the limit, BlockSky automatically pauses and shows a countdown. When the limit resets, blocking resumes automatically - just keep the page open.
               </AccordionContent>
             </AccordionItem>
 

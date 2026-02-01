@@ -1,4 +1,8 @@
-@import "tailwindcss";
+/* Fix for TanStack Start SSR CSS hash mismatch - use explicit imports with source() */
+/* See: https://github.com/TanStack/router/issues/4959 */
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/theme.css" layer(theme) source("../../");
+@import "tailwindcss/utilities.css" layer(utilities) source("../../");
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));

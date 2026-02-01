@@ -36,4 +36,4 @@ substitutions:
   _APP_URL: 'https://blocksky-1037807388921.us-central1.run.app'
 
 options:
-  logging: CLOUD_LOGGING_ONLY
+  logging: GCS_ONLY
