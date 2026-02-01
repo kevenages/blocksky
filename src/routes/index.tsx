@@ -189,6 +189,15 @@ function HomePage() {
   }
 
   const clearSelection = () => {
+    // Abort any ongoing operations
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+
+    // Clear pending state
+    pendingDidsRef.current = []
+    blockingTypeRef.current = null
+    tempTokensRef.current = null
+
     setSelectedProfile(null)
     setBlockingState({
       isBlocking: false,
@@ -514,14 +523,16 @@ function HomePage() {
       const allUsers: Array<{ did: string; handle: string }> = []
       let cursor: string | undefined
 
+      let pageCount = 0
       do {
         if (!mountedRef.current) return
+        pageCount++
 
         if (type === 'followers') {
           const result = await getFollowers({ data: { targetDid: selectedProfile.did, cursor } })
           if (!mountedRef.current) return
           if (!result.success) {
-            console.error('Failed to fetch followers:', result.error)
+            console.error('Failed to fetch followers:', result.error, { page: pageCount, fetched: allUsers.length })
             if (allUsers.length === 0) {
               toast.error('Failed to fetch followers. Please try again.')
               setBlockingState((prev) => ({ ...prev, isBlocking: false, current: 'Error fetching followers' }))
@@ -530,13 +541,14 @@ function HomePage() {
             // Continue with what we have if we got some
             break
           }
+          console.log(`Followers page ${pageCount}: got ${result.followers.length}, cursor: ${result.cursor ? 'yes' : 'no'}`)
           allUsers.push(...result.followers)
           cursor = result.cursor
         } else {
           const result = await getFollowing({ data: { targetDid: selectedProfile.did, cursor } })
           if (!mountedRef.current) return
           if (!result.success) {
-            console.error('Failed to fetch following:', result.error)
+            console.error('Failed to fetch following:', result.error, { page: pageCount, fetched: allUsers.length })
             if (allUsers.length === 0) {
               toast.error('Failed to fetch following. Please try again.')
               setBlockingState((prev) => ({ ...prev, isBlocking: false, current: 'Error fetching following' }))
@@ -545,6 +557,7 @@ function HomePage() {
             // Continue with what we have if we got some
             break
           }
+          console.log(`Following page ${pageCount}: got ${result.following.length}, cursor: ${result.cursor ? 'yes' : 'no'}`)
           allUsers.push(...result.following)
           cursor = result.cursor
         }
@@ -555,6 +568,12 @@ function HomePage() {
           current: `Found ${allUsers.length.toLocaleString()} ${type}...`,
         }))
       } while (cursor)
+
+      // Log count comparison for debugging
+      const expectedCount = type === 'followers' ? selectedProfile.followersCount : selectedProfile.followsCount
+      if (expectedCount && Math.abs(allUsers.length - expectedCount) > 10) {
+        console.warn(`Count mismatch for ${type}: profile says ${expectedCount}, but fetched ${allUsers.length} (diff: ${expectedCount - allUsers.length})`)
+      }
 
       if (!mountedRef.current) return
 
@@ -797,7 +816,7 @@ function HomePage() {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <h3 className="font-semibold truncate">
                           {selectedProfile.displayName || selectedProfile.handle}
                         </h3>
@@ -808,7 +827,7 @@ function HomePage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="shrink-0"
+                        className="shrink-0 -mt-1 -mr-2"
                         onClick={clearSelection}
                       >
                         <X className="h-4 w-4" />
