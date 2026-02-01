@@ -1,0 +1,35 @@
+# Ignore local build output - Cloud Build will create fresh
+.output/
+dist/
+
+# Git
+.git/
+.gitignore
+
+# Node
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test
+coverage/
+
+# Local env
+.env.local
+.env.*.local
+
+# Temp files
+*.tmp
+*.temp

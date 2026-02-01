@@ -1172,15 +1172,8 @@ function HomePage() {
             <AccordionItem value="login-methods">
               <AccordionTrigger>What's the difference between Quick Login and App Password?</AccordionTrigger>
               <AccordionContent>
-                <p className="mb-2"><strong>Quick Login (OAuth)</strong> is more secure. Your credentials are never shared with BlockSky - you authenticate directly with Bluesky. However, blocking runs through our server, which may hit rate limits faster.</p>
-                <p><strong>App Password</strong> allows faster blocking because requests go directly from your browser to Bluesky (like the original BlockSky). The tradeoff is that your session tokens are temporarily accessible to JavaScript during active blocking. You can revoke app passwords anytime in Bluesky Settings → Privacy → App Passwords.</p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="old-version">
-              <AccordionTrigger>Why did the older version of BlockSky seem faster?</AccordionTrigger>
-              <AccordionContent>
-                The older version ran blocking directly in your browser. If you sign in with an App Password, BlockSky uses this same faster approach. OAuth users get enhanced security but may hit rate limits sooner.
+                <p className="mb-2"><strong>App Password</strong> is the fastest option. Blocking requests go directly from your browser to Bluesky, just like the original BlockSky. The tradeoff is slightly reduced security - session tokens are temporarily accessible to JavaScript during blocking. You can revoke app passwords anytime in Bluesky Settings → Privacy → App Passwords.</p>
+                <p><strong>Quick Login (OAuth)</strong> is the most secure option. Your credentials never touch BlockSky - you authenticate directly with Bluesky. Blocking runs through our server, which may hit rate limits sooner due to shared infrastructure.</p>
               </AccordionContent>
             </AccordionItem>
 
@@ -1194,7 +1187,7 @@ function HomePage() {
             <AccordionItem value="credentials">
               <AccordionTrigger>Do you store my password or credentials?</AccordionTrigger>
               <AccordionContent>
-                No. With OAuth (Quick Login), you authenticate directly with Bluesky - we never see your password. With App Password, the password is sent to Bluesky's servers to create a session, but we don't store it. Session tokens are kept in secure HTTP-only cookies. For App Password users, tokens are only made available to JavaScript temporarily during active blocking operations.
+                No. We never store your password. Session tokens are kept in secure HTTP-only cookies and are only used to communicate with Bluesky on your behalf.
               </AccordionContent>
             </AccordionItem>
 

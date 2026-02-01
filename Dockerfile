@@ -13,8 +13,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Cache bust arg - change this value to force rebuild
+ARG CACHEBUST=2026-02-01-v3
+
 # Build the application (skip prebuild for OAuth, we generate at runtime)
-RUN npm run build
+RUN echo "Build: $CACHEBUST" && npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
