@@ -230,18 +230,30 @@ function HomePage() {
   }
 
   // Estimate total time based on blocking speed
-  // App password: ~5,000 blocks/hour (client-side, faster)
-  // OAuth: ~1,666 blocks/hour (server-side, stricter rate limits)
+  // App password: ~50ms delay = ~72 blocks/min = ~4,320/hour (client-side)
+  // OAuth: ~5ms delay but rate limited to ~1,666 blocks/hour (server-side)
   const estimateTime = (count: number, isAppPassword: boolean): string => {
-    const BLOCKS_PER_HOUR = isAppPassword ? 5000 : 1666
-    if (count <= BLOCKS_PER_HOUR) {
-      return 'under 1 hour'
+    const BLOCKS_PER_MINUTE = isAppPassword ? 72 : 28 // 72 for app password, 28 for OAuth
+    const totalMinutes = Math.ceil(count / BLOCKS_PER_MINUTE)
+
+    if (totalMinutes <= 1) {
+      return '~1 min'
     }
-    const hours = Math.ceil(count / BLOCKS_PER_HOUR)
-    if (hours === 1) {
-      return '~1 hour'
+    if (totalMinutes < 5) {
+      return `~${totalMinutes} mins`
     }
-    return `~${hours} hours`
+    if (totalMinutes < 60) {
+      // Round to nearest 5 minutes
+      const rounded = Math.round(totalMinutes / 5) * 5
+      return `~${rounded} mins`
+    }
+    // Over an hour - show hours and minutes
+    const hours = Math.floor(totalMinutes / 60)
+    const mins = Math.round((totalMinutes % 60) / 5) * 5
+    if (mins === 0) {
+      return `~${hours}h`
+    }
+    return `~${hours}h ${mins}m`
   }
 
   // Check if user is logged in with app password
