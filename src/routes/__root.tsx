@@ -27,6 +27,44 @@ export const Route = createRootRoute({
         name: 'description',
         content: 'Protect yourself on Bluesky. Mass block followers of problematic accounts with one click.',
       },
+      // Open Graph
+      {
+        property: 'og:title',
+        content: 'BlockSky - Mass Blocking for Bluesky',
+      },
+      {
+        property: 'og:description',
+        content: 'Protect yourself on Bluesky. Mass block followers of problematic accounts with one click.',
+      },
+      {
+        property: 'og:image',
+        content: 'https://blocksky.app/og-image.png',
+      },
+      {
+        property: 'og:url',
+        content: 'https://blocksky.app',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+      // Twitter Card
+      {
+        name: 'twitter:card',
+        content: 'summary_large_image',
+      },
+      {
+        name: 'twitter:title',
+        content: 'BlockSky - Mass Blocking for Bluesky',
+      },
+      {
+        name: 'twitter:description',
+        content: 'Protect yourself on Bluesky. Mass block followers of problematic accounts with one click.',
+      },
+      {
+        name: 'twitter:image',
+        content: 'https://blocksky.app/og-image.png',
+      },
     ],
     links: [
       {
