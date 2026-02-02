@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createEventStream, getCookie } from 'h3'
+import { defineEventHandler, readBody, createEventStream, getCookie, createError } from 'h3'
 import { Agent, AtpAgent } from '@atproto/api'
 import { XRPCError } from '@atproto/xrpc'
 
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
   console.log('[block-stream] userDid:', userDid)
   if (!userDid || !isValidDid(userDid)) {
     console.log('[block-stream] Not authenticated')
-    return { error: 'Not authenticated' }
+    throw createError({ statusCode: 401, message: 'Not authenticated' })
   }
 
   // Read the request body
@@ -60,18 +60,18 @@ export default defineEventHandler(async (event) => {
   const targetDids: string[] = body?.targetDids || []
 
   if (!targetDids.length) {
-    return { error: 'No targets provided' }
+    throw createError({ statusCode: 400, message: 'No targets provided' })
   }
 
   // Enforce batch size limit to prevent abuse
   if (targetDids.length > MAX_BATCH_SIZE) {
-    return { error: `Too many targets. Maximum is ${MAX_BATCH_SIZE}` }
+    throw createError({ statusCode: 400, message: `Too many targets. Maximum is ${MAX_BATCH_SIZE}` })
   }
 
   // Validate all DIDs
   const invalidDids = targetDids.filter((did) => !isValidDid(did))
   if (invalidDids.length > 0) {
-    return { error: `Invalid DIDs: ${invalidDids.length}` }
+    throw createError({ statusCode: 400, message: `Invalid DIDs: ${invalidDids.length}` })
   }
 
   // Create agent based on auth method
@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
       console.log('[block-stream] App password auth, has tokens:', !!accessJwt, !!refreshJwt)
 
       if (!accessJwt || !refreshJwt) {
-        return { error: 'Session expired. Please log in again.' }
+        throw createError({ statusCode: 401, message: 'Session expired. Please log in again.' })
       }
 
       const atpAgent = new AtpAgent({ service: 'https://bsky.social' })
@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (authError) {
     console.error('[block-stream] Auth error:', authError)
-    return { error: 'Failed to authenticate. Please log in again.' }
+    throw createError({ statusCode: 401, message: 'Failed to authenticate. Please log in again.' })
   }
 
   // Create event stream

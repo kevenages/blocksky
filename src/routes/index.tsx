@@ -286,8 +286,12 @@ function HomePage() {
       signal,
     })
 
-    if (!response.ok || !response.body) {
-      throw new Error('Failed to start blocking')
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to start blocking (${response.status})`)
+    }
+    if (!response.body) {
+      throw new Error('No response body from server')
     }
 
     const reader = response.body.getReader()
