@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LogIn, Loader2, Key } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
+import { analytics } from '@/lib/analytics'
 
 interface LoginDialogProps {
   trigger?: React.ReactNode
@@ -44,6 +45,7 @@ export function LoginDialog({ trigger }: LoginDialogProps) {
 
     setIsLoading(true)
     console.log('[OAuth] Calling login with handle:', handle.trim())
+    analytics.loginStart('oauth')
 
     try {
       await login(handle.trim())
@@ -78,6 +80,7 @@ export function LoginDialog({ trigger }: LoginDialogProps) {
     }
 
     setIsLoading(true)
+    analytics.loginStart('app_password')
 
     try {
       console.log('Calling /api/login-app-password...')
@@ -97,6 +100,7 @@ export function LoginDialog({ trigger }: LoginDialogProps) {
 
       if (result.success === true && result.user !== null) {
         console.log('Login successful, setting user:', result.user)
+        analytics.loginSuccess('app_password')
         setUser(result.user)
         setOpen(false)
         toast.success('Logged in successfully!')

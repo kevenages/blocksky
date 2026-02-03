@@ -100,6 +100,8 @@ export const Route = createRootRoute({
   component: RootComponent,
 })
 
+const GA_MEASUREMENT_ID = 'G-RVY854R6WS'
+
 function RootComponent() {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -121,6 +123,20 @@ function RootComponent() {
           html.dark { background-color: #242424; }
           body { opacity: 0; }
           body.css-loaded { opacity: 1; transition: opacity 0.1s ease-in; }
+        `}} />
+        {/* Google Analytics - production only */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            if (window.location.hostname !== 'blocksky.app') return;
+            var s = document.createElement('script');
+            s.async = true;
+            s.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}';
+            document.head.appendChild(s);
+            window.dataLayer = window.dataLayer || [];
+            window.gtag = function() { dataLayer.push(arguments); };
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          })();
         `}} />
         <HeadContent />
       </head>

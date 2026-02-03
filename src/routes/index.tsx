@@ -9,6 +9,7 @@ import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
 import { getProfile, getFollowers, getFollowing, getMutuals, getBlockedDids } from '@/lib/auth.server'
 import { toast } from 'sonner'
+import { analytics } from '@/lib/analytics'
 import { Progress } from '@/components/ui/progress'
 import { blockUsersClientSide, getBlockingTokens } from '@/lib/client-blocker'
 import {
@@ -344,6 +345,7 @@ function HomePage() {
               }))
               if (data.blocked > 0) {
                 toast.success(`Blocked ${data.blocked.toLocaleString()} users before rate limit! ${remainingDids.length > 0 ? `${remainingDids.length.toLocaleString()} remaining - will auto-resume.` : ''}`)
+                analytics.blockingRateLimit(data.blocked)
               }
               return
             } else if (data.type === 'complete') {
@@ -361,6 +363,7 @@ function HomePage() {
                 const blockedCount = skipCounts?.blocked ?? prev.skippedBlocked
                 // Dopamine hit - celebratory toast!
                 toast.success(`Done! Blocked ${(baseBlocked + data.blocked).toLocaleString()} ${type}`)
+                analytics.blockingComplete(type, baseBlocked + data.blocked)
                 return {
                   ...prev,
                   isBlocking: false,
