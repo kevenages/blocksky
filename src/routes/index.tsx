@@ -406,6 +406,9 @@ function HomePage() {
 
     if (remainingDids.length === 0 || !type) return
 
+    // Track that user waited for rate limit and resumed
+    analytics.blockingResume(remainingDids.length)
+
     try {
       const currentBlocked = blockingState.blocked
       const authMethod = getAuthMethod()

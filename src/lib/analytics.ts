@@ -55,6 +55,9 @@ export const analytics = {
   blockingRateLimit: (blocked: number) =>
     trackEvent('rate_limit_hit', 'blocking', undefined, blocked),
 
+  blockingResume: (remaining: number) =>
+    trackEvent('blocking_resume', 'blocking', undefined, remaining),
+
   // UI interactions
   clickFaq: (question: string) =>
     trackEvent('faq_click', 'engagement', question),
