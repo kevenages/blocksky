@@ -39,6 +39,7 @@ export const Route = createFileRoute('/')({
   component: HomePage,
   validateSearch: (search: Record<string, unknown>) => ({
     error: search.error as string | undefined,
+    login: search.login as string | undefined,
   }),
 })
 
@@ -73,7 +74,7 @@ interface BlockingState {
 
 function HomePage() {
   const { isAuthenticated, isLoading, user } = useAuth()
-  const { error } = useSearch({ from: '/' })
+  const { error, login } = useSearch({ from: '/' })
   const navigate = useNavigate()
   const [selectedProfile, setSelectedProfile] = useState<SelectedProfile | null>(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
@@ -103,9 +104,18 @@ function HomePage() {
       const message = errorMessages[error] || 'An error occurred. Please try again.'
       toast.error(message)
       // Clear the error from URL
-      navigate({ to: '/', search: { error: undefined }, replace: true })
+      navigate({ to: '/', search: { error: undefined, login: undefined }, replace: true })
     }
   }, [error, navigate])
+
+  // Track OAuth login success (redirect from /auth/callback)
+  useEffect(() => {
+    if (login === 'oauth') {
+      analytics.loginSuccess('oauth')
+      // Clear the login param from URL
+      navigate({ to: '/', search: { error: undefined, login: undefined }, replace: true })
+    }
+  }, [login, navigate])
 
   // Countdown timer for rate limit
   useEffect(() => {
@@ -631,6 +641,9 @@ function HomePage() {
         }))
         return
       }
+
+      // Track blocking start
+      analytics.blockingStart(type, toBlock.length)
 
       // Stream blocking progress in real-time
       const targetDids = toBlock.map((u) => u.did)
