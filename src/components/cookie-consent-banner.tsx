@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { analytics } from '@/lib/analytics'
 
 const CONSENT_COOKIE_NAME = 'blocksky_cookie_consent'
 
@@ -29,12 +30,13 @@ export function CookieConsentBanner() {
   const handleAccept = () => {
     setConsentCookie('accepted')
     setShowBanner(false)
-    // Analytics would be loaded here if implemented
+    analytics.cookieConsent(true)
   }
 
   const handleDecline = () => {
     setConsentCookie('declined')
     setShowBanner(false)
+    analytics.cookieConsent(false)
   }
 
   if (!showBanner) return null

@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { LogOut, User } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
+import { analytics } from '@/lib/analytics'
 
 export function UserMenu() {
   const { user, logout, isLoading } = useAuth()
@@ -10,6 +11,7 @@ export function UserMenu() {
   const handleLogout = async () => {
     try {
       await logout()
+      analytics.logout()
       toast.success('Signed out successfully')
       // Reload to ensure clean state
       window.location.href = '/'

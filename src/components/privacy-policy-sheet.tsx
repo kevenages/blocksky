@@ -7,6 +7,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { analytics } from '@/lib/analytics'
 
 interface PrivacyPolicySheetProps {
   trigger?: React.ReactNode
@@ -15,7 +16,7 @@ interface PrivacyPolicySheetProps {
 
 export function PrivacyPolicySheet({ trigger, className }: PrivacyPolicySheetProps) {
   return (
-    <Sheet>
+    <Sheet onOpenChange={(open) => { if (open) analytics.openPolicy('privacy') }}>
       <SheetTrigger asChild>
         {trigger || (
           <button className={className || 'text-sm text-muted-foreground hover:underline'}>

@@ -7,6 +7,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { analytics } from '@/lib/analytics'
 
 interface CookiePolicySheetProps {
   trigger?: React.ReactNode
@@ -15,7 +16,7 @@ interface CookiePolicySheetProps {
 
 export function CookiePolicySheet({ trigger, className }: CookiePolicySheetProps) {
   return (
-    <Sheet>
+    <Sheet onOpenChange={(open) => { if (open) analytics.openPolicy('cookies') }}>
       <SheetTrigger asChild>
         {trigger || (
           <button className={className || 'text-sm text-muted-foreground hover:underline'}>

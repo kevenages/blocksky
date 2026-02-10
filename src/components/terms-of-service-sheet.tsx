@@ -7,6 +7,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { analytics } from '@/lib/analytics'
 
 interface TermsOfServiceSheetProps {
   trigger?: React.ReactNode
@@ -15,7 +16,7 @@ interface TermsOfServiceSheetProps {
 
 export function TermsOfServiceSheet({ trigger, className }: TermsOfServiceSheetProps) {
   return (
-    <Sheet>
+    <Sheet onOpenChange={(open) => { if (open) analytics.openPolicy('terms') }}>
       <SheetTrigger asChild>
         {trigger || (
           <button className={className || 'text-sm text-muted-foreground hover:underline'}>
