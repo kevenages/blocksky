@@ -33,14 +33,25 @@ export function trackEvent(
   })
 }
 
+// Set user property for auth method segmentation
+export function setAuthMethod(method: 'oauth' | 'app_password') {
+  if (!isProduction()) return
+
+  window.gtag?.('set', 'user_properties', {
+    auth_method: method,
+  })
+}
+
 // Common events for BlockSky
 export const analytics = {
   // Auth events
   loginStart: (method: 'oauth' | 'app_password') =>
     trackEvent('login_start', 'auth', method),
 
-  loginSuccess: (method: 'oauth' | 'app_password') =>
-    trackEvent('login_success', 'auth', method),
+  loginSuccess: (method: 'oauth' | 'app_password') => {
+    trackEvent('login_success', 'auth', method)
+    setAuthMethod(method)
+  },
 
   logout: () =>
     trackEvent('logout', 'auth'),
