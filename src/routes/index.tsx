@@ -876,7 +876,7 @@ function HomePage() {
                     <p className="font-mono font-bold text-base tracking-widest text-blue-500">
                       PLAYER 1 READY
                     </p>
-                    <p className="font-mono text-sm text-black dark:text-black">
+                    <p className="font-mono text-sm text-black dark:text-white">
                       Arrow keys to dig &bull; Avoid the blobs
                     </p>
                   </div>
