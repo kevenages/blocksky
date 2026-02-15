@@ -434,45 +434,50 @@ export function DigDugGame() {
       keysRef.current.delete(e.key)
     }
 
+    const DRAG_THRESHOLD = 20 // px to trigger a direction change while dragging
+
     const handleTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0]
       touchStartRef.current = { x: touch.clientX, y: touch.clientY }
     }
 
-    const handleTouchEnd = (e: TouchEvent) => {
+    const handleTouchMove = (e: TouchEvent) => {
       const start = touchStartRef.current
       if (!start) return
+      e.preventDefault()
+
+      const touch = e.touches[0]
+      const dx = touch.clientX - start.x
+      const dy = touch.clientY - start.y
+
+      // Continuous drag: once finger moves far enough, set direction and reset anchor
+      if (Math.abs(dx) >= DRAG_THRESHOLD || Math.abs(dy) >= DRAG_THRESHOLD) {
+        keysRef.current.clear()
+        if (Math.abs(dx) > Math.abs(dy)) {
+          keysRef.current.add(dx > 0 ? 'ArrowRight' : 'ArrowLeft')
+        } else {
+          keysRef.current.add(dy > 0 ? 'ArrowDown' : 'ArrowUp')
+        }
+        // Reset anchor so the next drag segment is measured from here
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+      }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const start = touchStartRef.current
+      keysRef.current.clear()
+      touchStartRef.current = null
+      if (!start) return
+
+      // Tap to restart (short distance = tap, not drag)
       const touch = e.changedTouches[0]
       const dx = touch.clientX - start.x
       const dy = touch.clientY - start.y
-      touchStartRef.current = null
-
-      // Tap to restart (short swipe distance)
       if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
         if ((stateRef.current.gameOver || stateRef.current.won) && canRestart()) {
           resetGame()
         }
-        return
       }
-
-      e.preventDefault()
-
-      // Swipe direction (minimum 20px)
-      if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return
-      if (Math.abs(dx) > Math.abs(dy)) {
-        keysRef.current.clear()
-        keysRef.current.add(dx > 0 ? 'ArrowRight' : 'ArrowLeft')
-      } else {
-        keysRef.current.clear()
-        keysRef.current.add(dy > 0 ? 'ArrowDown' : 'ArrowUp')
-      }
-      // Clear the swipe key after one move cycle
-      setTimeout(() => keysRef.current.clear(), 150)
-    }
-
-    const handleTouchMove = (e: TouchEvent) => {
-      // Prevent page scroll while swiping on canvas
-      if (touchStartRef.current) e.preventDefault()
     }
 
     window.addEventListener('keydown', handleKeyDown)
