@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Users, Zap, Lock, X, Loader2, Heart, Clock, Wand2, MessageSquare } from 'lucide-react'
+import { FaRegCircleCheck, FaRegCircleXmark } from 'react-icons/fa6'
 import { useAuth } from '@/hooks/use-auth'
 import { LoginDialog } from '@/components/auth/login-dialog'
 import { ProfileSearch } from '@/components/profile-search'
@@ -24,6 +25,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface SelectedProfile {
   did: string
@@ -77,6 +86,9 @@ function HomePage() {
   const { error, login } = useSearch({ from: '/' })
   const navigate = useNavigate()
   const [selectedProfile, setSelectedProfile] = useState<SelectedProfile | null>(null)
+  const [showFollowingConfirm, setShowFollowingConfirm] = useState(false)
+  const [blockTarget, setBlockTarget] = useState(true)
+  const [targetAlreadyBlocked, setTargetAlreadyBlocked] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [blockingState, setBlockingState] = useState<BlockingState>({
     isBlocking: false,
@@ -184,16 +196,35 @@ function HomePage() {
 
     setIsLoadingProfile(true)
     try {
-      // Fetch full profile with follower counts
-      const result = await getProfile({ data: { handle: profile.handle } })
-      if (result.success && result.profile) {
-        setSelectedProfile(result.profile)
-      } else {
-        setSelectedProfile(profile)
+      // Fetch full profile and blocked DIDs in parallel
+      const [result, blockedResult] = await Promise.all([
+        getProfile({ data: { handle: profile.handle } }),
+        blockedDidsCache.current
+          ? Promise.resolve({ blockedDids: [...blockedDidsCache.current] })
+          : getBlockedDids({ data: {} }),
+      ])
+
+      // Cache blocked DIDs if freshly fetched
+      if (!blockedDidsCache.current) {
+        blockedDidsCache.current = new Set(blockedResult.blockedDids || [])
+      }
+
+      const selectedProf = result.success && result.profile ? result.profile : profile
+      if (!result.success) {
         toast.error('Could not load full profile details')
       }
+
+      setSelectedProfile(selectedProf)
+
+      // Check if target is already blocked or is self
+      const isSelf = selectedProf.handle === user.handle
+      const alreadyBlocked = blockedDidsCache.current.has(selectedProf.did)
+      setTargetAlreadyBlocked(alreadyBlocked)
+      setBlockTarget(!alreadyBlocked && !isSelf)
     } catch {
       setSelectedProfile(profile)
+      setTargetAlreadyBlocked(false)
+      setBlockTarget(true)
     } finally {
       setIsLoadingProfile(false)
     }
@@ -210,6 +241,8 @@ function HomePage() {
     tempTokensRef.current = null
 
     setSelectedProfile(null)
+    setBlockTarget(true)
+    setTargetAlreadyBlocked(false)
     setBlockingState({
       isBlocking: false,
       type: null,
@@ -622,17 +655,26 @@ function HomePage() {
 
       const skippedCount = skippedMutuals + skippedBlocked + skippedOther
 
+      // Build final list of DIDs to block
+      const targetDids = toBlock.map((u) => u.did)
+
+      // Prepend the target account if user opted to block them too
+      const shouldBlockTarget = blockTarget && !targetAlreadyBlocked && selectedProfile.did && !isWhitelisted(selectedProfile.handle)
+      if (shouldBlockTarget) {
+        targetDids.unshift(selectedProfile.did)
+      }
+
       if (!mountedRef.current) return
       setBlockingState((prev) => ({
         ...prev,
-        total: toBlock.length,
+        total: targetDids.length,
         skipped: skippedCount,
         skippedMutuals,
         skippedBlocked,
-        current: `Blocking ${toBlock.length.toLocaleString()} users (${skippedCount.toLocaleString()} skipped)...`,
+        current: `Blocking ${targetDids.length.toLocaleString()} users (${skippedCount.toLocaleString()} skipped)...`,
       }))
 
-      if (toBlock.length === 0) {
+      if (targetDids.length === 0) {
         if (!mountedRef.current) return
         setBlockingState((prev) => ({
           ...prev,
@@ -647,10 +689,7 @@ function HomePage() {
       }
 
       // Track blocking start
-      analytics.blockingStart(type, toBlock.length)
-
-      // Stream blocking progress in real-time
-      const targetDids = toBlock.map((u) => u.did)
+      analytics.blockingStart(type, targetDids.length)
 
       // Store type for potential auto-resume
       blockingTypeRef.current = type
@@ -903,22 +942,71 @@ function HomePage() {
                       </p>
                     </div>
 
+                    {/* Block target account toggle (hide when targeting yourself) */}
+                    {selectedProfile.handle === user?.handle ? null : targetAlreadyBlocked ? (
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="flex items-center gap-2 text-sm text-muted-foreground px-1 cursor-default">
+                              <FaRegCircleCheck className="h-4 w-4 text-green-600 shrink-0" />
+                              <span>@{selectedProfile.handle} already blocked</span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>You've already blocked this account</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <div
+                        role="checkbox"
+                        aria-checked={blockTarget}
+                        tabIndex={0}
+                        className="flex items-center gap-2 text-sm px-1 cursor-pointer select-none"
+                        onClick={() => setBlockTarget((prev) => !prev)}
+                        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setBlockTarget((prev) => !prev) } }}
+                      >
+                        {blockTarget ? (
+                          <FaRegCircleCheck className="h-4 w-4 text-green-600 shrink-0" />
+                        ) : (
+                          <FaRegCircleXmark className="h-4 w-4 text-muted-foreground shrink-0" />
+                        )}
+                        <span className={blockTarget ? 'text-foreground' : 'text-muted-foreground'}>
+                          Also block @{selectedProfile.handle}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Button
-                        className="w-full"
+                        className="w-full h-auto py-3"
                         variant="destructive"
                         onClick={handleBlockFollowers}
                       >
-                        <Users className="mr-2 h-4 w-4" />
-                        Block Followers
+                        <div className="flex flex-col items-center min-w-0 w-full">
+                          <span className="flex items-center">
+                            <Users className="mr-2 h-4 w-4 shrink-0" />
+                            Block Followers
+                          </span>
+                          <span className="text-xs font-normal opacity-80 mt-0.5 truncate max-w-full">
+                            People who follow @{selectedProfile.handle}
+                          </span>
+                        </div>
                       </Button>
                       <Button
-                        className="w-full"
+                        className="w-full h-auto py-3"
                         variant="outline"
-                        onClick={handleBlockFollowing}
+                        onClick={() => setShowFollowingConfirm(true)}
                       >
-                        <Users className="mr-2 h-4 w-4" />
-                        Block Following
+                        <div className="flex flex-col items-center min-w-0 w-full">
+                          <span className="flex items-center">
+                            <Users className="mr-2 h-4 w-4 shrink-0" />
+                            Block Following
+                          </span>
+                          <span className="text-xs font-normal opacity-60 mt-0.5 truncate max-w-full">
+                            Accounts followed by @{selectedProfile.handle}
+                          </span>
+                        </div>
                       </Button>
                     </div>
 
@@ -1016,22 +1104,36 @@ function HomePage() {
                         <div className="grid gap-2 sm:grid-cols-2">
                           {!blockingState.completedTypes.includes('followers') && (
                             <Button
-                              className="w-full"
+                              className="w-full h-auto py-3"
                               variant="destructive"
                               onClick={handleBlockFollowers}
                             >
-                              <Users className="mr-2 h-4 w-4" />
-                              Block Followers
+                              <div className="flex flex-col items-center min-w-0 w-full">
+                                <span className="flex items-center">
+                                  <Users className="mr-2 h-4 w-4 shrink-0" />
+                                  Block Followers
+                                </span>
+                                <span className="text-xs font-normal opacity-80 mt-0.5 truncate max-w-full">
+                                  People who follow @{selectedProfile.handle}
+                                </span>
+                              </div>
                             </Button>
                           )}
                           {!blockingState.completedTypes.includes('following') && (
                             <Button
-                              className="w-full"
+                              className="w-full h-auto py-3"
                               variant="outline"
-                              onClick={handleBlockFollowing}
+                              onClick={() => setShowFollowingConfirm(true)}
                             >
-                              <Users className="mr-2 h-4 w-4" />
-                              Block Following
+                              <div className="flex flex-col items-center min-w-0 w-full">
+                                <span className="flex items-center">
+                                  <Users className="mr-2 h-4 w-4 shrink-0" />
+                                  Block Following
+                                </span>
+                                <span className="text-xs font-normal opacity-60 mt-0.5 truncate max-w-full">
+                                  Accounts followed by @{selectedProfile.handle}
+                                </span>
+                              </div>
                             </Button>
                           )}
                         </div>
@@ -1065,6 +1167,42 @@ function HomePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Confirmation Dialog for Block Following */}
+        <Dialog open={showFollowingConfirm} onOpenChange={setShowFollowingConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Block @{selectedProfile?.handle}'s follows?</DialogTitle>
+              <DialogDescription className="space-y-3 pt-2">
+                <p>
+                  This will block the accounts that <strong>@{selectedProfile?.handle} follows</strong> — not their followers. These may include popular accounts, news outlets, or people unrelated to why you want to block.
+                </p>
+                {selectedProfile?.followsCount && selectedProfile.followsCount > 0 && (
+                  <p className="font-medium text-foreground">
+                    {selectedProfile.followsCount.toLocaleString()} accounts
+                  </p>
+                )}
+                <p>
+                  Your mutuals will be protected and won't be blocked.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowFollowingConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setShowFollowingConfirm(false)
+                  handleBlockFollowing()
+                }}
+              >
+                Block Following
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Feature Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full max-w-4xl">

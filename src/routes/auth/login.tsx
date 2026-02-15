@@ -13,7 +13,7 @@ export const Route = createFileRoute('/auth/login')({
 
     if (!handle) {
       console.log('[OAuth Login] No handle, redirecting to /')
-      throw redirect({ to: '/', search: { error: undefined } })
+      throw redirect({ to: '/', search: { error: undefined, login: undefined } })
     }
 
     try {
@@ -21,7 +21,7 @@ export const Route = createFileRoute('/auth/login')({
       const HANDLE_REGEX = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
       if (!HANDLE_REGEX.test(handle)) {
         console.error('[OAuth Login] Invalid handle format')
-        throw redirect({ to: '/', search: { error: 'invalid_handle' } })
+        throw redirect({ to: '/', search: { error: 'invalid_handle', login: undefined } })
       }
 
       console.log('[OAuth Login] Getting OAuth client...')
@@ -45,7 +45,7 @@ export const Route = createFileRoute('/auth/login')({
       }
 
       console.error('[OAuth Login] Error:', error)
-      throw redirect({ to: '/', search: { error: 'login_failed' } })
+      throw redirect({ to: '/', search: { error: 'login_failed', login: undefined } })
     }
   },
 

@@ -30,7 +30,7 @@ export const Route = createFileRoute('/auth/callback')({
       if (result.success) {
         // Redirect immediately to prevent client-side re-execution
         // Include login=oauth param so home page can track login_success
-        throw redirect({ to: '/', search: { login: 'oauth' } })
+        throw redirect({ to: '/', search: { login: 'oauth', error: undefined } })
       }
 
       return result
