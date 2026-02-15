@@ -155,6 +155,8 @@ export function DigDugGame() {
   const keysRef = useRef(new Set<string>())
   const rafRef = useRef<number>(0)
   const lastMoveRef = useRef(0)
+  const endedAtRef = useRef(0)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   const resetGame = useCallback(() => {
     const s = stateRef.current
@@ -167,6 +169,7 @@ export function DigDugGame() {
     s.won = false
     s.animFrame = 0
     lastMoveRef.current = 0
+    endedAtRef.current = 0
   }, [])
 
   const drawGame = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -273,6 +276,7 @@ export function DigDugGame() {
 
     // Game over overlay
     if (s.gameOver) {
+      const canRestart = endedAtRef.current > 0 && Date.now() - endedAtRef.current > 2000
       ctx.fillStyle = COLOR_GAMEOVER_BG
       ctx.fillRect(0, 0, WIDTH, HEIGHT)
       ctx.fillStyle = COLOR_ENEMY
@@ -282,13 +286,16 @@ export function DigDugGame() {
       ctx.fillStyle = COLOR_SCORE
       ctx.font = 'bold 24px monospace'
       ctx.fillText(`SCORE: ${s.score}`, WIDTH / 2, HEIGHT / 2 + 10)
-      ctx.fillStyle = '#ccc'
-      ctx.font = '14px monospace'
-      ctx.fillText('Press any key to restart', WIDTH / 2, HEIGHT / 2 + 50)
+      if (canRestart) {
+        ctx.fillStyle = '#ccc'
+        ctx.font = '14px monospace'
+        ctx.fillText('Tap or press any key to restart', WIDTH / 2, HEIGHT / 2 + 50)
+      }
     }
 
     // Win overlay
     if (s.won) {
+      const canRestart = endedAtRef.current > 0 && Date.now() - endedAtRef.current > 2000
       ctx.fillStyle = COLOR_GAMEOVER_BG
       ctx.fillRect(0, 0, WIDTH, HEIGHT)
       ctx.fillStyle = COLOR_SCORE
@@ -298,9 +305,11 @@ export function DigDugGame() {
       ctx.fillStyle = COLOR_PLAYER
       ctx.font = 'bold 24px monospace'
       ctx.fillText(`SCORE: ${s.score}`, WIDTH / 2, HEIGHT / 2 + 10)
-      ctx.fillStyle = '#ccc'
-      ctx.font = '14px monospace'
-      ctx.fillText('Press any key to restart', WIDTH / 2, HEIGHT / 2 + 50)
+      if (canRestart) {
+        ctx.fillStyle = '#ccc'
+        ctx.font = '14px monospace'
+        ctx.fillText('Tap or press any key to restart', WIDTH / 2, HEIGHT / 2 + 50)
+      }
     }
   }, [])
 
@@ -369,6 +378,7 @@ export function DigDugGame() {
         for (const enemy of s.enemies) {
           if (enemy.x === s.player.x && enemy.y === s.player.y) {
             s.gameOver = true
+            endedAtRef.current = Date.now()
             analytics.easterEggGameOver(s.score)
             break
           }
@@ -384,6 +394,7 @@ export function DigDugGame() {
           }
           if (!dirtRemaining) {
             s.won = true
+            endedAtRef.current = Date.now()
             analytics.easterEggWin(s.score)
           }
         }
@@ -406,9 +417,11 @@ export function DigDugGame() {
     // Start game loop
     rafRef.current = requestAnimationFrame(gameLoop)
 
+    const canRestart = () => endedAtRef.current > 0 && Date.now() - endedAtRef.current > 2000
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (stateRef.current.gameOver || stateRef.current.won) {
-        resetGame()
+        if (canRestart()) resetGame()
         return
       }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
@@ -421,8 +434,52 @@ export function DigDugGame() {
       keysRef.current.delete(e.key)
     }
 
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const start = touchStartRef.current
+      if (!start) return
+      const touch = e.changedTouches[0]
+      const dx = touch.clientX - start.x
+      const dy = touch.clientY - start.y
+      touchStartRef.current = null
+
+      // Tap to restart (short swipe distance)
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        if ((stateRef.current.gameOver || stateRef.current.won) && canRestart()) {
+          resetGame()
+        }
+        return
+      }
+
+      e.preventDefault()
+
+      // Swipe direction (minimum 20px)
+      if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return
+      if (Math.abs(dx) > Math.abs(dy)) {
+        keysRef.current.clear()
+        keysRef.current.add(dx > 0 ? 'ArrowRight' : 'ArrowLeft')
+      } else {
+        keysRef.current.clear()
+        keysRef.current.add(dy > 0 ? 'ArrowDown' : 'ArrowUp')
+      }
+      // Clear the swipe key after one move cycle
+      setTimeout(() => keysRef.current.clear(), 150)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      // Prevent page scroll while swiping on canvas
+      if (touchStartRef.current) e.preventDefault()
+    }
+
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: true })
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
 
     // Focus canvas for keyboard events
     canvas.tabIndex = 0
@@ -432,6 +489,9 @@ export function DigDugGame() {
       cancelAnimationFrame(rafRef.current)
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      canvas.removeEventListener('touchstart', handleTouchStart)
+      canvas.removeEventListener('touchend', handleTouchEnd)
+      canvas.removeEventListener('touchmove', handleTouchMove)
     }
   }, [gameLoop, resetGame])
 

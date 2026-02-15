@@ -877,7 +877,7 @@ function HomePage() {
                       PLAYER 1 READY
                     </p>
                     <p className="font-mono text-sm text-black dark:text-white">
-                      Arrow keys to dig &bull; Avoid the blobs
+                      Swipe or arrow keys to dig &bull; Avoid the blobs
                     </p>
                   </div>
                   <Button
