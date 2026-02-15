@@ -82,6 +82,26 @@ export const analytics = {
   // Cookie consent
   cookieConsent: (accepted: boolean) =>
     trackEvent('cookie_consent', 'privacy', accepted ? 'accepted' : 'declined'),
+
+  // Block Following UX
+  blockFollowingConfirm: (handle: string, count: number) =>
+    trackEvent('block_following_confirm', 'blocking', handle, count),
+
+  blockFollowingCancel: (handle: string) =>
+    trackEvent('block_following_cancel', 'blocking', handle),
+
+  blockAlsoTargetToggle: (on: boolean) =>
+    trackEvent('block_also_target_toggle', 'blocking', on ? 'on' : 'off'),
+
+  // Easter egg
+  easterEggFound: () =>
+    trackEvent('easter_egg_found', 'engagement'),
+
+  easterEggGameOver: (score: number) =>
+    trackEvent('easter_egg_game_over', 'engagement', undefined, score),
+
+  easterEggWin: (score: number) =>
+    trackEvent('easter_egg_win', 'engagement', undefined, score),
 }
 
 // Type declaration for gtag
