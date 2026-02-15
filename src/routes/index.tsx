@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { analytics } from '@/lib/analytics'
 import { Progress } from '@/components/ui/progress'
 import { blockUsersClientSide, getBlockingTokens } from '@/lib/client-blocker'
+import { DigDugGame } from '@/components/dig-dug-game'
 import {
   Accordion,
   AccordionContent,
@@ -824,7 +825,7 @@ function HomePage() {
               </CardDescription>
             </CardHeader>
           )}
-          {selectedProfile && (
+          {selectedProfile && selectedProfile.handle !== user?.handle && (
             <CardHeader>
               <CardTitle>Block @{selectedProfile.handle}'s network</CardTitle>
               <CardDescription>
@@ -868,7 +869,31 @@ function HomePage() {
               </div>
             )}
 
-            {isAuthenticated && selectedProfile && (
+            {isAuthenticated && selectedProfile && selectedProfile.handle === user?.handle && (
+              <div className="space-y-4" ref={(el) => { if (el && !el.dataset.tracked) { el.dataset.tracked = '1'; analytics.easterEggFound() } }}>
+                <div className="flex items-start justify-between rounded-lg border p-4">
+                  <div className="flex flex-1 flex-col items-center gap-1 text-center">
+                    <p className="font-mono font-bold text-base tracking-widest text-blue-500">
+                      PLAYER 1 READY
+                    </p>
+                    <p className="font-mono text-sm text-black dark:text-black">
+                      Arrow keys to dig &bull; Avoid the blobs
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 -mt-1 -mr-2"
+                    onClick={clearSelection}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <DigDugGame />
+              </div>
+            )}
+
+            {isAuthenticated && selectedProfile && selectedProfile.handle !== user?.handle && (
               <div className="space-y-4">
                 {/* Selected Profile Card */}
                 <div className="flex items-start gap-4 rounded-lg border p-4">
@@ -942,8 +967,8 @@ function HomePage() {
                       </p>
                     </div>
 
-                    {/* Block target account toggle (hide when targeting yourself) */}
-                    {selectedProfile.handle === user?.handle ? null : targetAlreadyBlocked ? (
+                    {/* Block target account toggle */}
+                    {targetAlreadyBlocked ? (
                       <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -963,8 +988,8 @@ function HomePage() {
                         aria-checked={blockTarget}
                         tabIndex={0}
                         className="flex items-center gap-2 text-sm px-1 cursor-pointer select-none"
-                        onClick={() => setBlockTarget((prev) => !prev)}
-                        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setBlockTarget((prev) => !prev) } }}
+                        onClick={() => setBlockTarget((prev) => { analytics.blockAlsoTargetToggle(!prev); return !prev })}
+                        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setBlockTarget((prev) => { analytics.blockAlsoTargetToggle(!prev); return !prev }) } }}
                       >
                         {blockTarget ? (
                           <FaRegCircleCheck className="h-4 w-4 text-green-600 shrink-0" />
@@ -1188,12 +1213,13 @@ function HomePage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowFollowingConfirm(false)}>
+              <Button variant="outline" onClick={() => { analytics.blockFollowingCancel(selectedProfile?.handle || ''); setShowFollowingConfirm(false) }}>
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => {
+                  analytics.blockFollowingConfirm(selectedProfile?.handle || '', selectedProfile?.followsCount || 0)
                   setShowFollowingConfirm(false)
                   handleBlockFollowing()
                 }}
