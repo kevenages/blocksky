@@ -180,6 +180,13 @@ Different approaches based on auth method:
 - [x] `block_also_target_toggle` for the "Also block @handle" toggle
 - [x] `easter_egg_found` / `easter_egg_game_over` / `easter_egg_win` for Dig Dug
 
+**GA4 Dashboard TODOs (Feb 17, 2026):**
+- [ ] Block Following Funnel: `block_following_confirm` vs `block_following_cancel` — confirmation dialog conversion rate
+- [ ] Easter Egg Engagement Funnel: `easter_egg_found` → `easter_egg_game_over` / `easter_egg_win` — do players actually play or close it?
+- [ ] Also Block Toggle report: `block_also_target_toggle` breakdown by `on`/`off` label — do users keep the default or opt out?
+- [ ] Mark `easter_egg_found` as Key Event (engagement metric)
+- [ ] Verify all 6 new events appear in Realtime report after first production traffic
+
 ## Social Sharing (Open Graph)
 - Meta tags configured in `src/routes/__root.tsx`
 - OG image: `public/og-image.png` (1200x630)
