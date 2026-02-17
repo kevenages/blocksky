@@ -243,9 +243,9 @@ Located in `scripts/` (gitignored):
 - Used for testing blocking functionality
 - App password stored separately (not in repo)
 
-## Future: App Cards Layout & Monorepo
+## Future: App Store Pattern & Monorepo
 
-**Vision:** Restructure BlockSky as a monorepo where each feature is its own "app" rendered as a card in a grid (rows of ~4). The login card stays as the entry point, but instead of housing the blocking function inline, each function gets its own card side-by-side.
+**Vision:** Restructure BlockSky using an "App Store" pattern — a monorepo where each feature is its own "app" rendered as a card in a grid (rows of ~4). The login card stays as the entry point, but instead of housing the blocking function inline, each function gets its own card side-by-side.
 
 **Key principles:**
 - Each feature = its own card (block followers, block following, unblock, background queue, etc.)
