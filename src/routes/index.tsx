@@ -677,15 +677,23 @@ function HomePage() {
 
       if (targetDids.length === 0) {
         if (!mountedRef.current) return
+        const reason = skippedBlocked === allUsers.length
+          ? 'All already blocked'
+          : skippedMutuals === allUsers.length
+            ? 'All are your mutuals'
+            : `All ${type} already blocked or protected`
         setBlockingState((prev) => ({
           ...prev,
           isBlocking: false,
           blocked: 0,
-          current: `No new ${type} to block`,
+          skippedMutuals,
+          skippedBlocked,
+          current: reason,
           completedTypes: prev.completedTypes.includes(type)
             ? prev.completedTypes
             : [...prev.completedTypes, type],
         }))
+        toast.info(`Nothing to do — ${reason.toLowerCase()}`)
         return
       }
 
@@ -1089,7 +1097,7 @@ function HomePage() {
                 {(blockingState.isBlocking || blockingState.completedTypes.length > 0) && !blockingState.rateLimitedUntil && (
                   <div className="space-y-3">
                     <div className="text-sm font-medium">
-                      {blockingState.isBlocking ? blockingState.current : 'Complete!'}
+                      {blockingState.isBlocking ? blockingState.current : blockingState.blocked > 0 ? 'Complete!' : blockingState.current || 'Complete!'}
                     </div>
 
                     {blockingState.total > 0 && blockingState.isBlocking && (
