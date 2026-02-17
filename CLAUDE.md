@@ -243,6 +243,27 @@ Located in `scripts/` (gitignored):
 - Used for testing blocking functionality
 - App password stored separately (not in repo)
 
+## Future: App Cards Layout & Monorepo
+
+**Vision:** Restructure BlockSky as a monorepo where each feature is its own "app" rendered as a card in a grid (rows of ~4). The login card stays as the entry point, but instead of housing the blocking function inline, each function gets its own card side-by-side.
+
+**Key principles:**
+- Each feature = its own card (block followers, block following, unblock, background queue, etc.)
+- Cards are always visible — premium/locked features are shown but disabled with a lock icon or "Premium" badge
+- This lets users discover features they'd pay for before they're available (builds demand)
+- As new features ship, new cards appear — the product grows visually
+- Monorepo structure: each app/feature is a self-contained module with its own components and logic
+
+**Card states:**
+- **Available** — user can click and use immediately
+- **Locked/Premium** — visible but disabled, shows what it does and why it's premium
+- **Coming Soon** — teaser for planned features
+
+**Architecture considerations:**
+- Monorepo with shared UI components, auth, and API utilities
+- Each feature app is independently deployable (future)
+- Shared layout handles the card grid, auth state, and feature gating
+
 ## Future: Premium Background Queue (Issue #98)
 Planned feature to handle rate limits automatically:
 - Store block queue in Firestore
