@@ -266,6 +266,13 @@ Located in `scripts/` (gitignored):
 - **Locked/Premium** — visible but disabled, shows what it does and why it's premium
 - **Coming Soon** — teaser for planned features
 
+**Potential app cards:**
+- Block Followers (existing)
+- Block Following (existing)
+- **Block Post Interactions** — block/mute users who liked, reposted, or replied to a specific post. User can choose likes, reposts, or both. Competitor "Prohibitorum" has this as "Skeet Interactions"
+- Unblock All
+- Background Queue (Premium — Issue #98)
+
 **Architecture considerations:**
 - Monorepo with shared UI components, auth, and API utilities
 - Each feature app is independently deployable (future)
