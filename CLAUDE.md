@@ -270,6 +270,8 @@ Located in `scripts/` (gitignored):
 - Block Followers (existing)
 - Block Following (existing)
 - **Block Post Interactions** — block/mute users who liked, reposted, or replied to a specific post. User can choose likes, reposts, or both. Competitor "Prohibitorum" has this as "Skeet Interactions"
+- **Mute** — same as blocking but softer (`app.bsky.graph.mute` instead of `block.create`). User doesn't see content but target isn't notified. Could be a toggle in existing flows or its own card
+- **Moderation List Creator** (Premium) — create shareable block/mute lists that other users can subscribe to. Community tool vs personal tool. Ongoing value = good premium candidate
 - Unblock All
 - Background Queue (Premium — Issue #98)
 
