@@ -9,10 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as AppMuteRouteImport } from './routes/_app/mute'
+import { Route as AppModListsRouteImport } from './routes/_app/mod-lists'
+import { Route as AppBlockInteractionsRouteImport } from './routes/_app/block-interactions'
+import { Route as AppBlockFollowersRouteImport } from './routes/_app/block-followers'
+import { Route as AppBackgroundQueueRouteImport } from './routes/_app/background-queue'
 
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -28,39 +38,114 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppMuteRoute = AppMuteRouteImport.update({
+  id: '/mute',
+  path: '/mute',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppModListsRoute = AppModListsRouteImport.update({
+  id: '/mod-lists',
+  path: '/mod-lists',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBlockInteractionsRoute = AppBlockInteractionsRouteImport.update({
+  id: '/block-interactions',
+  path: '/block-interactions',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBlockFollowersRoute = AppBlockFollowersRouteImport.update({
+  id: '/block-followers',
+  path: '/block-followers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBackgroundQueueRoute = AppBackgroundQueueRouteImport.update({
+  id: '/background-queue',
+  path: '/background-queue',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/background-queue': typeof AppBackgroundQueueRoute
+  '/block-followers': typeof AppBlockFollowersRoute
+  '/block-interactions': typeof AppBlockInteractionsRoute
+  '/mod-lists': typeof AppModListsRoute
+  '/mute': typeof AppMuteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/login': typeof AuthLoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/background-queue': typeof AppBackgroundQueueRoute
+  '/block-followers': typeof AppBlockFollowersRoute
+  '/block-interactions': typeof AppBlockInteractionsRoute
+  '/mod-lists': typeof AppModListsRoute
+  '/mute': typeof AppMuteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/login': typeof AuthLoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/background-queue': typeof AppBackgroundQueueRoute
+  '/_app/block-followers': typeof AppBlockFollowersRoute
+  '/_app/block-interactions': typeof AppBlockInteractionsRoute
+  '/_app/mod-lists': typeof AppModListsRoute
+  '/_app/mute': typeof AppMuteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/login': typeof AuthLoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/callback' | '/auth/login'
+  fullPaths:
+    | '/'
+    | '/background-queue'
+    | '/block-followers'
+    | '/block-interactions'
+    | '/mod-lists'
+    | '/mute'
+    | '/auth/callback'
+    | '/auth/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/callback' | '/auth/login'
-  id: '__root__' | '/' | '/auth/callback' | '/auth/login'
+  to:
+    | '/'
+    | '/background-queue'
+    | '/block-followers'
+    | '/block-interactions'
+    | '/mod-lists'
+    | '/mute'
+    | '/auth/callback'
+    | '/auth/login'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_app/background-queue'
+    | '/_app/block-followers'
+    | '/_app/block-interactions'
+    | '/_app/mod-lists'
+    | '/_app/mute'
+    | '/auth/callback'
+    | '/auth/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthLoginRoute: typeof AuthLoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,11 +167,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/mute': {
+      id: '/_app/mute'
+      path: '/mute'
+      fullPath: '/mute'
+      preLoaderRoute: typeof AppMuteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/mod-lists': {
+      id: '/_app/mod-lists'
+      path: '/mod-lists'
+      fullPath: '/mod-lists'
+      preLoaderRoute: typeof AppModListsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/block-interactions': {
+      id: '/_app/block-interactions'
+      path: '/block-interactions'
+      fullPath: '/block-interactions'
+      preLoaderRoute: typeof AppBlockInteractionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/block-followers': {
+      id: '/_app/block-followers'
+      path: '/block-followers'
+      fullPath: '/block-followers'
+      preLoaderRoute: typeof AppBlockFollowersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/background-queue': {
+      id: '/_app/background-queue'
+      path: '/background-queue'
+      fullPath: '/background-queue'
+      preLoaderRoute: typeof AppBackgroundQueueRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppBackgroundQueueRoute: typeof AppBackgroundQueueRoute
+  AppBlockFollowersRoute: typeof AppBlockFollowersRoute
+  AppBlockInteractionsRoute: typeof AppBlockInteractionsRoute
+  AppModListsRoute: typeof AppModListsRoute
+  AppMuteRoute: typeof AppMuteRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppBackgroundQueueRoute: AppBackgroundQueueRoute,
+  AppBlockFollowersRoute: AppBlockFollowersRoute,
+  AppBlockInteractionsRoute: AppBlockInteractionsRoute,
+  AppModListsRoute: AppModListsRoute,
+  AppMuteRoute: AppMuteRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthLoginRoute: AuthLoginRoute,
 }

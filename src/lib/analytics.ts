@@ -57,11 +57,14 @@ export const analytics = {
     trackEvent('logout', 'auth'),
 
   // Blocking events
-  blockingStart: (type: 'followers' | 'following', count: number) =>
+  blockingStart: (type: 'followers' | 'following' | 'interactions', count: number) =>
     trackEvent('blocking_start', 'blocking', type, count),
 
-  blockingComplete: (type: 'followers' | 'following', blocked: number) =>
+  blockingComplete: (type: 'followers' | 'following' | 'interactions', blocked: number) =>
     trackEvent('blocking_complete', 'blocking', type, blocked),
+
+  interactionBlockingStart: (types: string[], count: number) =>
+    trackEvent('interaction_blocking_start', 'blocking', types.join(','), count),
 
   blockingRateLimit: (blocked: number) =>
     trackEvent('rate_limit_hit', 'blocking', undefined, blocked),

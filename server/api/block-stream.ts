@@ -171,6 +171,15 @@ export default defineEventHandler(async (event) => {
               continue
             }
 
+            // Log the error for debugging
+            if (attempt === 0) {
+              console.error(`[block-stream] block.create failed for ${targetDid}:`, {
+                status,
+                message,
+                attempt: attempt + 1,
+              })
+            }
+
             // Other error - retry
             if (attempt < 2) {
               await sleep(100)
@@ -180,6 +189,10 @@ export default defineEventHandler(async (event) => {
 
         if (!success) {
           failed++
+          // Log cumulative failures periodically
+          if (failed <= 3 || failed % 50 === 0) {
+            console.warn(`[block-stream] Failed so far: ${failed}/${blocked + failed} (blocked: ${blocked})`)
+          }
         }
 
         // Send progress update
