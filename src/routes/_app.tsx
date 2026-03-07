@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { createFileRoute, Outlet, useLocation } from '@tanstack/react-router'
 import { FeatureCardGrid } from '@/components/feature-card-grid'
+import { ExternalLinks } from '@/components/external-links'
+import { FaqSection } from '@/components/faq-section'
 import { trackPageView } from '@/lib/analytics'
 
 export const Route = createFileRoute('/_app')({
@@ -23,6 +25,8 @@ function AppLayout() {
         <div className="w-full max-w-4xl">
           <FeatureCardGrid />
         </div>
+        <ExternalLinks />
+        <FaqSection />
       </div>
     </div>
   )

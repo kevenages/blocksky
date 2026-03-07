@@ -1,5 +1,6 @@
 import { Heart, Repeat2, Quote, MessageCircle } from 'lucide-react'
 import { FaRegCircleCheck, FaRegCircleXmark } from 'react-icons/fa6'
+import { analytics } from '@/lib/analytics'
 import type { InteractionType, PostPreview } from '@/lib/types'
 
 interface InteractionTypeSelectorProps {
@@ -41,7 +42,12 @@ export function InteractionTypeSelector({ selectedTypes, post, onToggle, disable
                   ? 'border-blue-500/50 bg-blue-500/5'
                   : 'border-transparent bg-muted/30'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => !disabled && onToggle(type)}
+              onClick={() => {
+                if (disabled) return
+                const willBeSelected = !isSelected
+                analytics.interactionTypeToggle(type, willBeSelected)
+                onToggle(type)
+              }}
               onKeyDown={(e) => {
                 if (!disabled && (e.key === ' ' || e.key === 'Enter')) {
                   e.preventDefault()

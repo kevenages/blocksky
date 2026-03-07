@@ -96,6 +96,16 @@ export const analytics = {
   blockAlsoTargetToggle: (on: boolean) =>
     trackEvent('block_also_target_toggle', 'blocking', on ? 'on' : 'off'),
 
+  // Post interactions
+  postResolve: (url: string) =>
+    trackEvent('post_resolve', 'interactions', url),
+
+  postResolveError: (error: string) =>
+    trackEvent('post_resolve_error', 'interactions', error),
+
+  interactionTypeToggle: (type: string, on: boolean) =>
+    trackEvent('interaction_type_toggle', 'interactions', type, on ? 1 : 0),
+
   // Easter egg
   easterEggFound: () =>
     trackEvent('easter_egg_found', 'engagement'),

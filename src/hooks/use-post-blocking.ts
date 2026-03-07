@@ -28,13 +28,17 @@ export function usePostBlocking(user: User | null) {
       const result = await resolvePostUrl({ data: { url } })
 
       if (!result.success || !result.post) {
-        setResolveError(result.error || 'Failed to resolve post')
+        const errorMsg = result.error || 'Failed to resolve post'
+        setResolveError(errorMsg)
+        analytics.postResolveError(errorMsg)
         return
       }
 
       setPostPreview(result.post)
+      analytics.postResolve(url)
     } catch {
       setResolveError('Failed to resolve post. Check the URL and try again.')
+      analytics.postResolveError('Failed to resolve post')
     } finally {
       setIsResolvingPost(false)
     }
@@ -70,7 +74,6 @@ export function usePostBlocking(user: User | null) {
 
       // Fetch each selected type (paginate fully)
       const types = [...selectedTypes]
-      analytics.interactionBlockingStart(types, 0)
 
       for (const type of types) {
         if (!engine.mountedRef.current) return
@@ -138,6 +141,8 @@ export function usePostBlocking(user: User | null) {
       if (!engine.mountedRef.current) return
 
       setFetchProgress(`Found ${allUsers.size.toLocaleString()} unique users. Filtering...`)
+
+      analytics.interactionBlockingStart(types, allUsers.size)
 
       // Filter: skip mutuals, already-blocked, self, whitelisted, and the post author
       let skippedMutuals = 0
