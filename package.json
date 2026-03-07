@@ -44,6 +44,11 @@
     "tailwindcss": "^4.1.18",
     "vite-tsconfig-paths": "^6.0.2"
   },
+  "overrides": {
+    "gaxios": {
+      "node-fetch": "2.7.0"
+    }
+  },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.3.11",
     "@testing-library/dom": "^10.4.0",
