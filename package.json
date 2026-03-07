@@ -42,7 +42,6 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
-    "vinxi": "^0.5.11",
     "vite-tsconfig-paths": "^6.0.2"
   },
   "devDependencies": {
