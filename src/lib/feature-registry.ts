@@ -1,4 +1,4 @@
-import { Users, MessageCircle, VolumeX, ListChecks, Clock } from 'lucide-react'
+import { Users, MessageCircle, VolumeX } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export type FeatureStatus = 'available' | 'coming-soon' | 'premium'
@@ -38,23 +38,5 @@ export const features: Feature[] = [
     route: '/mute',
     status: 'coming-soon',
     badge: 'Coming Soon',
-  },
-  {
-    id: 'mod-lists',
-    title: 'Moderation Lists',
-    description: 'Create shareable block or mute lists that other users can subscribe to.',
-    icon: ListChecks,
-    route: '/mod-lists',
-    status: 'premium',
-    badge: 'Premium',
-  },
-  {
-    id: 'background-queue',
-    title: 'Background Queue',
-    description: 'Queue blocks to run in the background. Close the page and come back later.',
-    icon: Clock,
-    route: '/background-queue',
-    status: 'premium',
-    badge: 'Premium',
   },
 ]
