@@ -1,6 +1,9 @@
-import { defineEventHandler, readBody, createEventStream, getCookie, createError } from 'h3'
+import { defineEventHandler, readBody, createEventStream, getCookie, setCookie, createError } from 'h3'
 import { Agent, AtpAgent } from '@atproto/api'
 import { XRPCError } from '@atproto/xrpc'
+
+const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 // 30 days
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 const DID_REGEX = /^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$/
 const MAX_BATCH_SIZE = 50000 // Maximum DIDs per request
@@ -90,7 +93,26 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 401, message: 'Session expired. Please log in again.' })
       }
 
-      const atpAgent = new AtpAgent({ service: 'https://bsky.social' })
+      const atpAgent = new AtpAgent({
+        service: 'https://bsky.social',
+        persistSession: (_evt, session) => {
+          if (!session?.accessJwt || !session?.refreshJwt) return
+          setCookie(event, 'bsky_access_jwt', session.accessJwt, {
+            httpOnly: true,
+            secure: IS_PRODUCTION,
+            sameSite: 'strict',
+            maxAge: COOKIE_MAX_AGE,
+            path: '/',
+          })
+          setCookie(event, 'bsky_refresh_jwt', session.refreshJwt, {
+            httpOnly: true,
+            secure: IS_PRODUCTION,
+            sameSite: 'strict',
+            maxAge: COOKIE_MAX_AGE,
+            path: '/',
+          })
+        },
+      })
       await atpAgent.resumeSession({
         did: userDid,
         handle: getCookie(event, 'bsky_handle') || '',

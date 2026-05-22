@@ -43,6 +43,23 @@ export async function getBlockingTokens(): Promise<BlockingTokens | null> {
 }
 
 /**
+ * Persist refreshed tokens back to the server so the httpOnly cookies stay
+ * in sync. Without this, a page reload mid-session would hand out the stale
+ * tokens that were valid when blocking started.
+ */
+async function persistTokens(accessJwt: string, refreshJwt: string): Promise<void> {
+  try {
+    await fetch('/api/update-tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessJwt, refreshJwt }),
+    })
+  } catch (error) {
+    console.error('Error persisting refreshed tokens:', error)
+  }
+}
+
+/**
  * Refresh the access token using the refresh token
  */
 async function refreshAccessToken(refreshToken: string): Promise<{ accessJwt: string; refreshJwt: string } | null> {
@@ -60,6 +77,7 @@ async function refreshAccessToken(refreshToken: string): Promise<{ accessJwt: st
     }
 
     const data = await response.json()
+    await persistTokens(data.accessJwt, data.refreshJwt)
     return { accessJwt: data.accessJwt, refreshJwt: data.refreshJwt }
   } catch (error) {
     console.error('Error refreshing token:', error)

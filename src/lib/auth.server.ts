@@ -495,7 +495,26 @@ export const getBlockedDids = createServerFn({ method: 'GET' })
             throw new Error('Session expired. Please log in again.')
           }
 
-          const atpAgent = new AtpAgent({ service: 'https://bsky.social' })
+          const atpAgent = new AtpAgent({
+            service: 'https://bsky.social',
+            persistSession: (_evt, session) => {
+              if (!session?.accessJwt || !session?.refreshJwt) return
+              setCookie('bsky_access_jwt', session.accessJwt, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 30 * 24 * 60 * 60,
+                path: '/',
+              })
+              setCookie('bsky_refresh_jwt', session.refreshJwt, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 30 * 24 * 60 * 60,
+                path: '/',
+              })
+            },
+          })
           await atpAgent.resumeSession({
             did: userDid,
             handle: '', // Not needed for getBlocks

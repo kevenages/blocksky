@@ -64,6 +64,11 @@ const config = defineConfig({
           method: 'GET',
           handler: './server/api/get-blocking-tokens.ts',
         },
+        {
+          route: '/api/update-tokens',
+          method: 'POST',
+          handler: './server/api/update-tokens.ts',
+        },
       ],
     }),
     tailwindcss(),
