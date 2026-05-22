@@ -21,41 +21,57 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: 'Session expired. Please log in again.' }
   }
 
-  try {
-    const response = await fetch('https://bsky.social/xrpc/com.atproto.server.refreshSession', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${refreshJwt}` },
-    })
+  const backoffsMs = [500, 1000, 2000]
+  let refreshed = false
 
-    if (response.ok) {
-      const data = await response.json()
-      accessJwt = data.accessJwt
-      refreshJwt = data.refreshJwt
-
-      setCookie(event, 'bsky_access_jwt', accessJwt!, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: COOKIE_MAX_AGE,
-        path: '/',
+  for (let attempt = 0; attempt <= backoffsMs.length && !refreshed; attempt++) {
+    try {
+      const response: Response = await fetch('https://bsky.social/xrpc/com.atproto.server.refreshSession', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${refreshJwt}` },
       })
 
-      setCookie(event, 'bsky_refresh_jwt', refreshJwt!, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: COOKIE_MAX_AGE,
-        path: '/',
-      })
-    } else if (response.status === 400 || response.status === 401) {
-      // Refresh token itself is invalid/expired - user must log in again
-      return { success: false, error: 'Session expired. Please log in again.' }
+      if (response.ok) {
+        const data: { accessJwt: string; refreshJwt: string } = await response.json()
+        accessJwt = data.accessJwt
+        refreshJwt = data.refreshJwt
+
+        setCookie(event, 'bsky_access_jwt', accessJwt!, {
+          httpOnly: true,
+          secure: IS_PRODUCTION,
+          sameSite: 'strict',
+          maxAge: COOKIE_MAX_AGE,
+          path: '/',
+        })
+
+        setCookie(event, 'bsky_refresh_jwt', refreshJwt!, {
+          httpOnly: true,
+          secure: IS_PRODUCTION,
+          sameSite: 'strict',
+          maxAge: COOKIE_MAX_AGE,
+          path: '/',
+        })
+        refreshed = true
+        break
+      }
+
+      // 4xx (except 429) means the refresh token itself is dead - re-login required
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return { success: false, error: 'Session expired. Please log in again.' }
+      }
+
+      console.warn(`[get-blocking-tokens] Refresh transient failure (status ${response.status}), attempt ${attempt + 1}`)
+    } catch (error) {
+      console.warn(`[get-blocking-tokens] Refresh network error, attempt ${attempt + 1}:`, error)
     }
-    // Other refresh errors (5xx, network): fall through and return current tokens.
-    // If they happen to still be valid we proceed; if not the client's 401 handler will retry.
-  } catch (error) {
-    console.error('[get-blocking-tokens] Refresh failed, returning existing tokens:', error)
+
+    if (attempt < backoffsMs.length) {
+      await new Promise((resolve) => setTimeout(resolve, backoffsMs[attempt]))
+    }
   }
+
+  // If we exhausted retries, fall through with the existing tokens.
+  // The client's 401 handler will retry; if those tokens still don't work, user will see "Session expired."
 
   return {
     success: true,

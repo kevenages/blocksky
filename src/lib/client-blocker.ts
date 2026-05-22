@@ -60,29 +60,47 @@ async function persistTokens(accessJwt: string, refreshJwt: string): Promise<voi
 }
 
 /**
- * Refresh the access token using the refresh token
+ * Refresh the access token using the refresh token.
+ * Retries on transient failures (5xx, network) with exponential backoff so a
+ * brief bsky.social blip doesn't doom the rest of the blocking session.
+ * Does NOT retry 400/401 — those mean the refresh JWT itself is invalid.
  */
 async function refreshAccessToken(refreshToken: string): Promise<{ accessJwt: string; refreshJwt: string } | null> {
-  try {
-    const response = await fetch('https://bsky.social/xrpc/com.atproto.server.refreshSession', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${refreshToken}`,
-      },
-    })
+  const backoffsMs = [500, 1000, 2000]
 
-    if (!response.ok) {
-      console.error('Token refresh failed:', response.status)
-      return null
+  for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
+    try {
+      const response = await fetch('https://bsky.social/xrpc/com.atproto.server.refreshSession', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${refreshToken}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        await persistTokens(data.accessJwt, data.refreshJwt)
+        return { accessJwt: data.accessJwt, refreshJwt: data.refreshJwt }
+      }
+
+      // 4xx (except 429) means the refresh token is bad — retrying won't help
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        console.error('Token refresh rejected:', response.status)
+        return null
+      }
+
+      console.warn(`Token refresh transient failure (status ${response.status}), attempt ${attempt + 1}`)
+    } catch (error) {
+      console.warn(`Token refresh network error, attempt ${attempt + 1}:`, error)
     }
 
-    const data = await response.json()
-    await persistTokens(data.accessJwt, data.refreshJwt)
-    return { accessJwt: data.accessJwt, refreshJwt: data.refreshJwt }
-  } catch (error) {
-    console.error('Error refreshing token:', error)
-    return null
+    if (attempt < backoffsMs.length) {
+      await sleep(backoffsMs[attempt])
+    }
   }
+
+  console.error('Token refresh failed after retries')
+  return null
 }
 
 /**
