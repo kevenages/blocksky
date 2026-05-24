@@ -352,7 +352,26 @@ Audit from Feb 2026 found potentially unused code. Verify before removing:
 - This is NOT a code bug — the stale JS bundle causes the issue
 
 ## Known Issues
-- **h3 vulnerability (CVE-2026-23527)**: HTTP Request Smuggling, High severity
-  - Vinxi 0.5.11 (latest) still uses h3@1.15.3 (vulnerable <= 1.15.4)
-  - Waiting for vinxi to update h3 dependency
-  - Check: `npm ls h3` and Dependabot alert #46
+
+### Dependabot alerts (audited 2026-05-23)
+GitHub reports ~46 open alerts, npm audit collapses to ~27 unique. The project is no longer on vinxi — it uses `nitro-nightly` directly. Outdated nitro-nightly is the biggest single source of runtime-path alerts.
+
+**Runtime concerns (worth fixing):**
+- `h3` (5 alerts, including SSE injection — we use SSE for `/api/block-stream`) — transitive via nitro
+- `undici` (10 alerts: HTTP smuggling, CRLF injection) — via nitro and `@atproto/oauth-client-node`
+- `srvx` (middleware bypass) — via nitro
+- `@tanstack/start-server-core` (server-function deserialization)
+- `node-forge` (4 high: cert/signature forgery) — via firebase-admin service account auth
+
+**Likely non-exploitable in BlockSky's usage:**
+- `protobufjs` (8 alerts, 1 critical) — only used internally by Firestore client; we don't accept user-supplied protobuf
+- `fast-xml-parser`/`fast-xml-builder` — pulled by `@google-cloud/storage`, unused by BlockSky
+- `@tootallnate/once`, `brace-expansion` — transitive build/cleanup tooling
+
+**Dev-only (not in production build):**
+- `vite` (3 alerts: dev server file read) — never invoked at runtime on Cloud Run
+- `picomatch` — build/test globbing
+
+**Fix path:** Bumping `nitro-nightly` from the pinned 4-month-old version (`3.0.1-20260131-...`) to the current nightly (`3.0.260522-beta` or later) should clear most of the h3/undici/srvx alerts in one shot. Test in a worktree first — nitro-nightly can introduce breaking changes.
+
+To re-triage: `gh api repos/kevenages/blocksky/dependabot/alerts --paginate -q '.[] | select(.state == "open") | .dependency.package.name' | sort | uniq -c | sort -rn`
