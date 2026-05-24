@@ -69,6 +69,11 @@ const config = defineConfig({
           method: 'POST',
           handler: './server/api/update-tokens.ts',
         },
+        {
+          route: '/api/logout',
+          method: 'POST',
+          handler: './server/api/logout.ts',
+        },
       ],
     }),
     tailwindcss(),

@@ -71,8 +71,14 @@ export function useAuth() {
   }, [])
 
   const logout = useCallback(async () => {
-    // Clear cookies by setting them to expired
-    document.cookie = 'bsky_did=; path=/; max-age=0'
+    // Server clears httpOnly token cookies; client can't touch those directly
+    try {
+      await fetch('/api/logout', { method: 'POST' })
+    } catch (error) {
+      console.error('[useAuth] Server logout failed, clearing client state anyway:', error)
+    }
+
+    // Also clear non-httpOnly cookies client-side as a belt-and-suspenders measure
     document.cookie = 'bsky_handle=; path=/; max-age=0'
     document.cookie = 'bsky_display_name=; path=/; max-age=0'
     document.cookie = 'bsky_avatar=; path=/; max-age=0'

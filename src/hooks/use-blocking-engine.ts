@@ -34,6 +34,20 @@ export function getAuthMethod(): string | undefined {
   return cookies['auth_method']
 }
 
+// Auth genuinely failed (refresh token dead) — clear cookies server-side and bounce to "/".
+// The reload forces the UI to re-derive auth state from now-empty cookies, dropping the avatar.
+async function forceLogoutAndReload(): Promise<void> {
+  try {
+    await fetch('/api/logout', { method: 'POST' })
+  } catch (error) {
+    console.error('[blocking-engine] Logout fetch failed, redirecting anyway:', error)
+  }
+  toast.error('Your session expired. Please log in again.')
+  setTimeout(() => {
+    window.location.href = '/'
+  }, 1200)
+}
+
 export function isWhitelisted(handle: string): boolean {
   return handle.endsWith('.bsky.app') || handle.endsWith('.bsky.team') || handle === 'bsky.app'
 }
@@ -121,6 +135,12 @@ export function useBlockingEngine(_user: User | null) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      // 401 from block-stream means the server-side session is genuinely dead.
+      // Force a logout so the UI stops showing the user as authenticated.
+      if (response.status === 401) {
+        await forceLogoutAndReload()
+        throw new Error('Session expired')
+      }
       throw new Error(errorData.message || `Failed to start blocking (${response.status})`)
     }
     if (!response.body) {
@@ -457,12 +477,12 @@ export function useBlockingEngine(_user: User | null) {
         // Fetch tokens on-demand (temporary exposure only during blocking)
         const tokens = await getBlockingTokens()
         if (!tokens) {
-          toast.error('Failed to get session tokens. Please log in again.')
           setBlockingState((prev) => ({
             ...prev,
             isBlocking: false,
             current: 'Session error',
           }))
+          await forceLogoutAndReload()
           return
         }
 
