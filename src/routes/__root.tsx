@@ -7,8 +7,24 @@ import { PrivacyPolicySheet } from '@/components/privacy-policy-sheet'
 import { TermsOfServiceSheet } from '@/components/terms-of-service-sheet'
 import { ThemeProvider } from '@/components/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { FAQ_ENTRIES } from '@/data/faq'
 
 import appCss from '../styles.css?url'
+
+// FAQPage JSON-LD lets Google AI Overviews, Perplexity, ChatGPT, etc.
+// surface these Q&As when users ask about BlockSky.
+const FAQ_JSONLD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ENTRIES.map((entry) => ({
+    '@type': 'Question',
+    name: entry.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: entry.answer,
+    },
+  })),
+})
 
 export const Route = createRootRoute({
   head: () => ({
@@ -138,6 +154,10 @@ function RootComponent() {
             gtag('config', '${GA_MEASUREMENT_ID}');
           })();
         `}} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: FAQ_JSONLD }}
+        />
         <HeadContent />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">

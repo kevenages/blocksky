@@ -1,0 +1,44 @@
+# BlockSky
+
+> BlockSky is a free mass-blocking tool for Bluesky. It lets users block large groups of accounts in one operation — for example, every follower of a problematic account, every user who interacted with a specific post, or every account someone is following. It runs in the browser, authenticates against Bluesky's official APIs, and respects Bluesky's rate limits.
+
+BlockSky is built and operated by Duhado.
+
+## What BlockSky does
+
+- **Block Followers** — block every account that follows a given user
+- **Block Following** — block every account that a given user follows
+- **Block Post Interactions** — block users who liked, reposted, quoted, or replied to a specific Bluesky post (with deduplication)
+- **Mutual protection** — accounts that follow you and that you follow back are automatically excluded from any block operation
+- **Official-account protection** — Bluesky team accounts (`*.bsky.app`, `*.bsky.team`) are never blocked
+
+## How authentication works
+
+BlockSky offers two login methods:
+
+1. **OAuth (Quick Login)** — most secure. Credentials never touch BlockSky. Tokens are stored in httpOnly cookies. Blocking runs server-side.
+2. **App Password** — faster. Blocking runs client-side directly against `bsky.social`. Users can revoke app passwords in Bluesky Settings → Privacy → App Passwords at any time.
+
+BlockSky does not store passwords. Session tokens live in httpOnly cookies and are used only to communicate with Bluesky.
+
+## Rate limits
+
+Bluesky enforces global API limits (~3,000 requests per IP per 5 minutes) and PDS event limits (50 events/sec, 1,500/hour, 10,000/day). BlockSky pauses automatically when a rate limit is hit and resumes when the limit resets — the user only needs to keep the page open.
+
+## Data and privacy
+
+- No password storage
+- No block list storage — BlockSky does not retain the list of accounts a user has blocked
+- Minimal anonymous analytics (Google Analytics 4) for service improvement
+- Bluesky profile information is used only during the session and is not persisted
+
+## Key URLs
+
+- Site: https://blocksky.app
+- Privacy, cookie, and terms policies are available as in-app sheets from the footer
+
+## Not what BlockSky is
+
+- Not affiliated with Bluesky PBC
+- Not a moderation list creator (planned for a future premium tier)
+- Not a way to bypass Bluesky's rate limits — BlockSky enforces them, it does not circumvent them
