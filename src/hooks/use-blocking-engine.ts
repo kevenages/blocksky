@@ -34,18 +34,24 @@ export function getAuthMethod(): string | undefined {
   return cookies['auth_method']
 }
 
-// Auth genuinely failed (refresh token dead) — clear cookies server-side and bounce to "/".
-// The reload forces the UI to re-derive auth state from now-empty cookies, dropping the avatar.
-async function forceLogoutAndReload(): Promise<void> {
+// Auth genuinely failed (refresh token dead) — clear cookies server-side and
+// nudge the header to re-derive auth state. No hard reload: useAuth listens
+// for `blocksky:auth-changed` and re-reads cookies, swapping avatar for login
+// buttons. Toast offers an explicit refresh action for users who want it.
+async function forceLogout(): Promise<void> {
   try {
     await fetch('/api/logout', { method: 'POST' })
   } catch (error) {
-    console.error('[blocking-engine] Logout fetch failed, redirecting anyway:', error)
+    console.error('[blocking-engine] Logout fetch failed, dispatching auth-changed anyway:', error)
   }
-  toast.error('Your session expired. Please log in again.')
-  setTimeout(() => {
-    window.location.href = '/'
-  }, 1200)
+  window.dispatchEvent(new Event('blocksky:auth-changed'))
+  toast.error('Your session expired. Please log in again.', {
+    action: {
+      label: 'Refresh page',
+      onClick: () => window.location.reload(),
+    },
+    duration: 8000,
+  })
 }
 
 export function isWhitelisted(handle: string): boolean {
@@ -138,7 +144,7 @@ export function useBlockingEngine(_user: User | null) {
       // 401 from block-stream means the server-side session is genuinely dead.
       // Force a logout so the UI stops showing the user as authenticated.
       if (response.status === 401) {
-        await forceLogoutAndReload()
+        await forceLogout()
         throw new Error('Session expired')
       }
       throw new Error(errorData.message || `Failed to start blocking (${response.status})`)
@@ -482,7 +488,7 @@ export function useBlockingEngine(_user: User | null) {
             isBlocking: false,
             current: 'Session error',
           }))
-          await forceLogoutAndReload()
+          await forceLogout()
           return
         }
 

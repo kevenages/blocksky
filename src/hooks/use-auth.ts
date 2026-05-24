@@ -61,6 +61,14 @@ export function useAuth() {
     checkAuthStatus()
   }, [checkAuthStatus])
 
+  // Other parts of the app (e.g. the blocking engine on session-expired) can
+  // dispatch this event to nudge auth state without a page reload.
+  useEffect(() => {
+    const handler = () => checkAuthStatus()
+    window.addEventListener('blocksky:auth-changed', handler)
+    return () => window.removeEventListener('blocksky:auth-changed', handler)
+  }, [checkAuthStatus])
+
   const login = useCallback(async (handle: string) => {
     // For now, we'll handle OAuth initiation differently
     // This will be updated when we have the proper OAuth flow
