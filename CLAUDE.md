@@ -280,6 +280,28 @@ Located in `scripts/` (gitignored):
 - Each feature app is independently deployable (future)
 - Shared layout handles the card grid, auth state, and feature gating
 
+## Future: Localization (i18n)
+
+**Evidence of real international demand** (GA4, Apr 26 – May 23, 2026, 28-day window):
+Chrome auto-translation rewrites `document.title` in place, so GA4's `page_view` event captures the translated title. The top-pages report shows organic translated traffic:
+- DE "Massenblockierung..." — ~214 views (~7% of total page views)
+- FR "Blocage de masse..." — 1 view
+- ZH "為 Bluesky 提供大..." — 1 view
+
+So ~200 Germans/month are already routing the page through browser translation. Browser translation only catches static chrome rendered at page-load time — dynamic state (rate-limit countdowns, blocking progress, toasts, error messages) renders after the translation pass and likely stays in English, which is exactly the surface where confusion causes "BlockSky is broken" support emails.
+
+**Planned approach** (decided May 22, 2026):
+1. Ship a v1 release that lays i18n infrastructure + externalizes all user-facing strings, but ships EN-only. Hand-rolled `t()` + JSON files per locale was the preferred path over react-i18next (lighter, no new deps).
+2. Sourcing strategy for translations: DeepL draft → post to Bluesky asking for native review → merge once 1–2 native speakers sign off. Avoids shipping bad translations under the brand. Keven is not a native DE speaker so can't self-validate.
+3. Browser language auto-detect on first visit + manual override (footer toggle), choice persisted in cookie.
+4. Locale priority: DE first (largest organic audience), then FR / ZH / others as community contributors emerge.
+
+**Bundled contextual messaging improvements** (also punted from the May 22 release):
+- "Safe to leave this page open" reassurance shown inline *during* blocking and during rate-limit waits (currently only pre-start, in `blocking-actions.tsx`)
+- ETA / time-remaining estimate during blocking
+- Richer success screen replacing the generic toast — opportunity for a contextual donation ask ("BlockSky has processed X blocks this month, support keeps it running") since the urgency-driven monetization window is right after `blocking_complete`
+- Expandable "why this happens" explainer on rate-limit UI
+
 ## Future: Premium Background Queue (Issue #98)
 Planned feature to handle rate limits automatically:
 - Store block queue in Firestore
