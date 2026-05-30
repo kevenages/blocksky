@@ -1,5 +1,6 @@
 import { Clock } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
+import { KofiLink } from '@/components/kofi-link'
 import type { BlockingState } from '@/lib/types'
 
 interface BlockingProgressProps {
@@ -51,6 +52,7 @@ export function BlockingProgress({ blockingState, formatCountdown }: BlockingPro
 
   return (
     <div className="space-y-3">
+      {blockingState.isBlocking && <KofiLink className="pb-1" />}
       <div className="text-sm font-medium">
         {blockingState.isBlocking ? blockingState.current : blockingState.blocked > 0 ? 'Complete!' : blockingState.current || 'Complete!'}
       </div>

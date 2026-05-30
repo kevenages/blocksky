@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
-import { Heart, Loader2 } from 'lucide-react'
-import { analytics } from '@/lib/analytics'
+import { Loader2 } from 'lucide-react'
+import { KofiLink } from '@/components/kofi-link'
 import type { BlockingState, InteractionType, PostPreview } from '@/lib/types'
 
 interface PostBlockingActionsProps {
@@ -63,7 +63,6 @@ export function PostBlockingActions({
 
         <Button
           className="w-full h-auto py-3"
-          variant="destructive"
           onClick={onBlock}
           disabled={selectedTypes.size === 0}
         >
@@ -100,16 +99,7 @@ export function PostBlockingActions({
 
         {/* Ko-fi donation link */}
         <div className="pt-2 border-t">
-          <a
-            href="https://ko-fi.com/blockskyapp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-pink-500 transition-colors"
-            onClick={() => analytics.clickExternalLink('https://ko-fi.com/blockskyapp')}
-          >
-            <Heart className="h-4 w-4" />
-            Support BlockSky on Ko-fi
-          </a>
+          <KofiLink size="sm" />
         </div>
       </div>
     )

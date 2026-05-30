@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
-import { Users, Heart } from 'lucide-react'
+import { Users } from 'lucide-react'
+import { KofiLink } from '@/components/kofi-link'
 import { FaRegCircleCheck, FaRegCircleXmark } from 'react-icons/fa6'
 import { toast } from 'sonner'
 import { analytics } from '@/lib/analytics'
@@ -102,7 +103,6 @@ export function BlockingActions({
         <div className="grid gap-2 sm:grid-cols-2">
           <Button
             className="w-full h-auto py-3"
-            variant="destructive"
             onClick={onBlockFollowers}
           >
             <div className="flex flex-col items-center min-w-0 w-full">
@@ -117,7 +117,6 @@ export function BlockingActions({
           </Button>
           <Button
             className="w-full h-auto py-3"
-            variant="outline"
             onClick={() => setShowFollowingConfirm(true)}
           >
             <div className="flex flex-col items-center min-w-0 w-full">
@@ -125,7 +124,7 @@ export function BlockingActions({
                 <Users className="mr-2 h-4 w-4 shrink-0" />
                 Block Following
               </span>
-              <span className="text-xs font-normal opacity-60 mt-0.5 truncate max-w-full">
+              <span className="text-xs font-normal opacity-80 mt-0.5 truncate max-w-full">
                 Accounts followed by @{selectedProfile.handle}
               </span>
             </div>
@@ -158,7 +157,6 @@ export function BlockingActions({
           {!blockingState.completedTypes.includes('followers') && (
             <Button
               className="w-full h-auto py-3"
-              variant="destructive"
               onClick={onBlockFollowers}
             >
               <div className="flex flex-col items-center min-w-0 w-full">
@@ -175,7 +173,6 @@ export function BlockingActions({
           {!blockingState.completedTypes.includes('following') && (
             <Button
               className="w-full h-auto py-3"
-              variant="outline"
               onClick={() => setShowFollowingConfirm(true)}
             >
               <div className="flex flex-col items-center min-w-0 w-full">
@@ -183,7 +180,7 @@ export function BlockingActions({
                   <Users className="mr-2 h-4 w-4 shrink-0" />
                   Block Following
                 </span>
-                <span className="text-xs font-normal opacity-60 mt-0.5 truncate max-w-full">
+                <span className="text-xs font-normal opacity-80 mt-0.5 truncate max-w-full">
                   Accounts followed by @{selectedProfile.handle}
                 </span>
               </div>
@@ -201,16 +198,7 @@ export function BlockingActions({
 
         {/* Ko-fi donation link */}
         <div className="pt-2 border-t">
-          <a
-            href="https://ko-fi.com/blockskyapp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-pink-500 transition-colors"
-            onClick={() => analytics.clickExternalLink('https://ko-fi.com/blockskyapp')}
-          >
-            <Heart className="h-4 w-4" />
-            Support BlockSky on Ko-fi
-          </a>
+          <KofiLink size="sm" />
         </div>
       </div>
     )
